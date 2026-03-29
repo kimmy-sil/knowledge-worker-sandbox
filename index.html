@@ -891,7 +891,7 @@ const TIERS = [
   { maxW: 50,       cost: 0,    qCapFrac: 0 },
   { maxW: 200,      cost: 0,    qCapFrac: 0.2 },
   { maxW: 1000,     cost: 20,   qCapFrac: 0.5 },
-  { maxW: 5000,     cost: 150,  qCapFrac: 0.8 },
+  { maxW: 5000,     cost: 200,  qCapFrac: 0.8 },
   { maxW: Infinity, cost: 1000, qCapFrac: 1.0 },
 ];
 
@@ -1561,7 +1561,7 @@ function renderTierChart(res) {
   const xs = Array.from({ length: rounds }, (_, i) => i + 1);
   const tiers = [0, 1, 2, 3, 4];
   const colors = [PC.t0, PC.t1, PC.t2, PC.t3, PC.t4];
-  const names = ['Tier 0 (免费最低层)', 'Tier 1 (基础免费)', 'Tier 2 ($20/月)', 'Tier 3 ($150/月)', 'Tier 4 ($1000/月)'];
+  const names = ['Tier 0 (无AI)', 'Tier 1 (免费层)', 'Tier 2 ($20/月 Pro)', 'Tier 3 ($200/月 Max)', 'Tier 4 ($1000+/月 企业)'];
 
   const traces = tiers.map(t => ({
     x: xs,
