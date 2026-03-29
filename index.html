@@ -1,0 +1,2373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>知识工作者市场数字沙盘 v3</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+  :root {
+    --grad-a: #667eea;
+    --grad-b: #764ba2;
+    --sidebar-w: 320px;
+    --card-bg: #ffffff;
+    --bg: #f0f2f8;
+    --text: #2d3748;
+    --text-light: #718096;
+    --border: #e2e8f0;
+    --accent: #667eea;
+    --disabled-bg: #f7f7f9;
+    --disabled-text: #b0b8c5;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* ──────── HEADER ──────── */
+  .header {
+    background: linear-gradient(135deg, var(--grad-a) 0%, var(--grad-b) 100%);
+    color: #fff;
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 2px 12px rgba(102,126,234,0.3);
+  }
+  .header-logo { width: 42px; height: 42px; flex-shrink: 0; }
+  .header-text h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.02em; }
+  .header-text p { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+
+  /* ──────── BODY LAYOUT ──────── */
+  .layout { display: flex; min-height: calc(100vh - 74px); }
+
+  /* ──────── SIDEBAR ──────── */
+  .sidebar {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    background: #fff;
+    border-right: 1px solid var(--border);
+    padding: 16px 14px;
+    overflow-y: auto;
+    height: calc(100vh - 74px);
+    position: sticky;
+    top: 0;
+  }
+  .sidebar-section { margin-bottom: 20px; }
+  .sidebar-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-light);
+    padding: 6px 0 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 10px;
+  }
+  .ctrl-row { margin-bottom: 10px; }
+  .ctrl-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+  .ctrl-label span:first-child { color: var(--text); font-weight: 500; }
+  .ctrl-label .val { color: var(--accent); font-weight: 700; min-width: 36px; text-align: right; }
+  input[type=range] { width: 100%; height: 4px; accent-color: var(--accent); cursor: pointer; }
+  input[type=range]:disabled { opacity: 0.35; cursor: not-allowed; }
+  .ctrl-row.policy-ctrl .ctrl-label span:first-child { color: var(--text); }
+  .ctrl-row.policy-ctrl.disabled .ctrl-label span:first-child { color: var(--disabled-text); }
+  .ctrl-row.policy-ctrl.disabled .val { color: var(--disabled-text); }
+
+  /* ──────── PRESET BUTTONS ──────── */
+  .preset-btns {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .preset-btn {
+    flex: 1;
+    padding: 7px 4px;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    background: #fff;
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .preset-btn:hover { border-color: var(--accent); color: var(--accent); background: #f5f5ff; }
+  .preset-btn.active-preset { background: linear-gradient(135deg, var(--grad-a), var(--grad-b)); color: #fff; border-color: transparent; }
+
+  .run-btn {
+    width: 100%;
+    padding: 12px 0;
+    background: linear-gradient(135deg, var(--grad-a), var(--grad-b));
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    box-shadow: 0 4px 14px rgba(102,126,234,0.35);
+    transition: transform 0.1s, box-shadow 0.1s;
+    margin-top: 8px;
+  }
+  .run-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(102,126,234,0.45); }
+  .run-btn:active { transform: translateY(0); }
+  .run-btn.running { opacity: 0.7; cursor: not-allowed; }
+
+  /* ──────── MAIN ──────── */
+  .main { flex: 1; padding: 20px; overflow-y: auto; min-width: 0; }
+
+  /* ──────── TABS ──────── */
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    padding: 8px 14px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text-light);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .tab-btn.active {
+    background: linear-gradient(135deg, var(--grad-a), var(--grad-b));
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 3px 10px rgba(102,126,234,0.3);
+  }
+
+  /* ──────── MODE BADGE ──────── */
+  .mode-desc {
+    background: linear-gradient(135deg, #f0f4ff, #f5f0ff);
+    border: 1px solid #d4d9f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 12.5px;
+    color: #5a5f8a;
+    line-height: 1.6;
+  }
+  .mode-desc strong { color: var(--accent); }
+
+  /* ──────── STAT CARDS ──────── */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  @media (max-width: 1400px) { .stat-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 900px)  { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+  .stat-card {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--grad-a), var(--grad-b));
+  }
+  .stat-card .label { font-size: 11px; color: var(--text-light); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-card .value { font-size: 26px; font-weight: 800; color: var(--text); margin: 4px 0 2px; line-height: 1; }
+  .stat-card .sub { font-size: 11px; color: var(--text-light); }
+  .stat-card .delta { font-size: 12px; font-weight: 700; }
+  .delta.pos { color: #e53e3e; }
+  .delta.neg { color: #38a169; }
+
+  /* ──────── CHARTS GRID ──────── */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .chart-card {
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    border: 1px solid var(--border);
+  }
+  .chart-card.full-width { grid-column: 1 / -1; }
+  .chart-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chart-title .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--grad-a), var(--grad-b));
+  }
+
+  /* ──────── PROGRESS / STATUS ──────── */
+  .sim-status {
+    text-align: center;
+    padding: 8px;
+    font-size: 12px;
+    color: var(--text-light);
+    margin-top: 10px;
+  }
+
+  /* ──────── TOAST ──────── */
+  #toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: linear-gradient(135deg, var(--grad-a), var(--grad-b));
+    color: #fff;
+    padding: 10px 24px;
+    border-radius: 24px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 6px 24px rgba(102,126,234,0.4);
+    transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    z-index: 1000;
+    pointer-events: none;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ──────── COMPARE VIEW ──────── */
+  #tab_compare_panel { display: none; }
+  .compare-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .compare-col {
+    border-radius: 10px;
+    padding: 14px;
+    border: 1.5px solid var(--border);
+    background: #fff;
+  }
+  .compare-col.left { border-color: #fca5a5; background: #fff9f9; }
+  .compare-col.right { border-color: #93c5fd; background: #f5f9ff; }
+  .compare-col-title {
+    font-size: 13px; font-weight: 700; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .compare-col.left .compare-col-title { color: #dc2626; }
+  .compare-col.right .compare-col-title { color: #2563eb; }
+  .delta-row {
+    background: #fff;
+    border-radius: 10px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .delta-row h3 { font-size: 13px; font-weight: 700; margin-bottom: 12px; color: var(--text); }
+  .delta-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .delta-metric {
+    text-align: center;
+    background: #f8f9fb;
+    border-radius: 8px;
+    padding: 12px 8px;
+    border: 1px solid var(--border);
+  }
+  .delta-metric .dm-label { font-size: 11px; color: var(--text-light); font-weight: 600; margin-bottom: 4px; }
+  .delta-metric .dm-val { font-size: 22px; font-weight: 800; }
+  .dm-val.better { color: #16a34a; }
+  .dm-val.worse { color: #dc2626; }
+  .dm-val.neutral { color: #6366f1; }
+
+  /* ──────── SENSITIVITY HEATMAP ──────── */
+  #tab_sensitivity_panel { display: none; }
+  .sensitivity-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    background: #fff;
+    border-radius: 10px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .sensitivity-controls label { font-size: 12px; font-weight: 600; color: var(--text-light); }
+  .sensitivity-controls select {
+    padding: 6px 10px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--text);
+    background: #fff;
+    cursor: pointer;
+  }
+  .sensitivity-controls select:focus { outline: none; border-color: var(--accent); }
+  .gen-btn {
+    padding: 8px 18px;
+    background: linear-gradient(135deg, var(--grad-a), var(--grad-b));
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(102,126,234,0.3);
+    transition: all 0.2s;
+  }
+  .gen-btn:hover { transform: translateY(-1px); }
+  .gen-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .sensitivity-progress {
+    font-size: 12px;
+    color: var(--text-light);
+    margin-left: 8px;
+  }
+  .sensitivity-interpretation {
+    background: linear-gradient(135deg, #f0f4ff, #f5f0ff);
+    border: 1px solid #d4d9f0;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-top: 14px;
+    font-size: 13px;
+    color: #5a5f8a;
+    line-height: 1.7;
+  }
+
+  /* ──────── CAUSAL PANEL ──────── */
+  #tab_causal_panel { display: none; }
+  .causal-section {
+    background: #fff;
+    border-radius: 10px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    margin-bottom: 14px;
+  }
+  .causal-section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .causal-section-desc {
+    font-size: 12px;
+    color: var(--text-light);
+    margin-bottom: 12px;
+    line-height: 1.6;
+  }
+  .action-btn {
+    padding: 9px 20px;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(79,70,229,0.3);
+    transition: all 0.2s;
+    margin-bottom: 12px;
+  }
+  .action-btn:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(79,70,229,0.4); }
+  .action-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .causal-result {
+    background: linear-gradient(135deg, #f0f4ff, #f5f0ff);
+    border: 1px solid #d4d9f0;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #5a5f8a;
+    line-height: 1.7;
+    display: none;
+  }
+  .causal-result.visible { display: block; }
+  .mechanism-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 12px;
+  }
+  .mechanism-table th {
+    background: #f0f4ff;
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 700;
+    border-bottom: 2px solid #d4d9f0;
+    color: #4a5568;
+  }
+  .mechanism-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  .mechanism-table tr:last-child td { border-bottom: none; }
+  .mechanism-table tr:hover td { background: #f8f9ff; }
+
+  /* ──────── SCROLLBAR ──────── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #c8d0e0; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ HEADER ══════════════ -->
+<div class="header">
+  <svg class="header-logo" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="21" cy="21" r="20" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+    <circle cx="21" cy="21" r="8" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.6)" stroke-width="1.5"/>
+    <circle cx="21" cy="9"  r="3" fill="#fff" opacity="0.9"/>
+    <circle cx="21" cy="33" r="3" fill="#fff" opacity="0.6"/>
+    <circle cx="9"  cy="21" r="3" fill="#fff" opacity="0.7"/>
+    <circle cx="33" cy="21" r="3" fill="#fff" opacity="0.8"/>
+    <circle cx="12.5" cy="12.5" r="2.5" fill="#fff" opacity="0.5"/>
+    <circle cx="29.5" cy="29.5" r="2.5" fill="#fff" opacity="0.5"/>
+    <line x1="21" y1="12" x2="21" y2="18" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+    <line x1="21" y1="24" x2="21" y2="30" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+    <line x1="12" y1="21" x2="18" y2="21" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+    <line x1="24" y1="21" x2="30" y2="21" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+  </svg>
+  <div class="header-text">
+    <h1>知识工作者市场数字沙盘 v3</h1>
+    <p>AI赋能分配格局演化模拟平台 · 三方博弈 · 六模式 · 分屏对比 · 敏感性分析 · 因果识别</p>
+  </div>
+</div>
+
+<!-- ══════════════ LAYOUT ══════════════ -->
+<div class="layout">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar">
+
+    <!-- PRESET BUTTONS -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-title" title="一键设置所有参数至预定义场景">预设场景</div>
+      <div class="preset-btns">
+        <button class="preset-btn" id="preset_conservative" onclick="applyPreset('conservative')" title="开源弱、数字鸿沟大、职业流动低——最悲观预测">🔒 保守</button>
+        <button class="preset-btn" id="preset_balanced" onclick="applyPreset('balanced')" title="当前现实的近似参数——基准预测">⚖️ 中性</button>
+        <button class="preset-btn" id="preset_aggressive" onclick="applyPreset('aggressive')" title="开源追上商业、数字素养普及、高流动性——最乐观预测">🚀 激进</button>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">核心机制</div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span>开源模型质量下限 q_floor</span><span class="val" id="v_qfloor">0.30</span></div>
+        <input type="range" id="s_qfloor" min="0" max="1" step="0.05" value="0.30" oninput="syncVal('s_qfloor','v_qfloor',2)">
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span>开源质量增长率 g_oss</span><span class="val" id="v_goss">0.020</span></div>
+        <input type="range" id="s_goss" min="0" max="0.1" step="0.005" value="0.02" oninput="syncVal('s_goss','v_goss',3)">
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span>商业模型增长率 g_prop</span><span class="val" id="v_gprop">0.040</span></div>
+        <input type="range" id="s_gprop" min="0" max="0.1" step="0.005" value="0.04" oninput="syncVal('s_gprop','v_gprop',3)">
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">双重门槛设计</div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span>数字素养分布偏向</span><span class="val" id="v_dbias">2.0</span></div>
+        <input type="range" id="s_dbias" min="1" max="5" step="0.5" value="2.0" oninput="syncVal('s_dbias','v_dbias',1)">
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span>财富-素养相关性</span><span class="val" id="v_wcorr">0.3</span></div>
+        <input type="range" id="s_wcorr" min="0" max="0.9" step="0.1" value="0.3" oninput="syncVal('s_wcorr','v_wcorr',1)">
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">任务市场结构</div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span>常规任务占比</span><span class="val" id="v_routine">0.50</span></div>
+        <input type="range" id="s_routine" min="0" max="1" step="0.05" value="0.50" oninput="syncVal('s_routine','v_routine',2)">
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span>边界任务占比</span><span class="val" id="v_frontier">0.25</span></div>
+        <input type="range" id="s_frontier" min="0" max="0.5" step="0.05" value="0.25" oninput="syncVal('s_frontier','v_frontier',2)">
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span>职业转型速度</span><span class="val" id="v_mobility">0.05</span></div>
+        <input type="range" id="s_mobility" min="0" max="0.2" step="0.01" value="0.05" oninput="syncVal('s_mobility','v_mobility',2)">
+      </div>
+    </div>
+
+    <div class="sidebar-section" id="policy-section">
+      <div class="sidebar-section-title">政策工具</div>
+
+      <div class="ctrl-row policy-ctrl disabled" id="row_infra">
+        <div class="ctrl-label"><span>🏗️ 公共AI基础设施</span><span class="val" id="v_infra">0.00</span></div>
+        <input type="range" id="s_infra" min="0" max="1" step="0.05" value="0.0" disabled oninput="syncVal('s_infra','v_infra',2)">
+      </div>
+      <div class="ctrl-row policy-ctrl disabled" id="row_learn">
+        <div class="ctrl-label"><span>📚 学习加速计划</span><span class="val" id="v_learn">0.00</span></div>
+        <input type="range" id="s_learn" min="0" max="1" step="0.05" value="0.0" disabled oninput="syncVal('s_learn','v_learn',2)">
+      </div>
+      <div class="ctrl-row policy-ctrl disabled" id="row_open">
+        <div class="ctrl-label"><span>🔓 平台开放规则</span><span class="val" id="v_open">0.00</span></div>
+        <input type="range" id="s_open" min="0" max="1" step="0.05" value="0.0" disabled oninput="syncVal('s_open','v_open',2)">
+      </div>
+      <div class="ctrl-row policy-ctrl disabled" id="row_univ">
+        <div class="ctrl-label"><span>🤝 国家AI普惠服务</span><span class="val" id="v_univ">0.00</span></div>
+        <input type="range" id="s_univ" min="0" max="1" step="0.05" value="0.0" disabled oninput="syncVal('s_univ','v_univ',2)">
+      </div>
+      <div class="ctrl-row policy-ctrl disabled" id="row_tax">
+        <div class="ctrl-label"><span>💰 再分配税率</span><span class="val" id="v_tax">0.00</span></div>
+        <input type="range" id="s_tax" min="0" max="0.3" step="0.01" value="0.0" disabled oninput="syncVal('s_tax','v_tax',2)">
+      </div>
+      <div class="ctrl-row policy-ctrl disabled" id="row_community_cost">
+        <div class="ctrl-label"><span>🌱 降低社区参与成本</span><span class="val" id="v_community_cost">0.00</span></div>
+        <input type="range" id="s_community_cost" min="0" max="1" step="0.05" value="0.0" disabled oninput="syncVal('s_community_cost','v_community_cost',2)">
+        <div style="font-size:11px;color:#718096;margin-top:2px">降低开源贡献的时间/精力成本 → 提升γ、活跃度</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section" id="gov-community-section">
+      <div class="sidebar-section-title">社区-政府博弈</div>
+
+      <!-- Contribution threshold -->
+      <div class="ctrl-row policy-ctrl disabled" id="row_contrib_threshold">
+        <div class="ctrl-label"><span>🎓 社区贡献能力门槛</span><span class="val" id="v_contrib_threshold">0.50</span></div>
+        <input type="range" id="s_contrib_threshold" min="0.2" max="0.8" step="0.05" value="0.5" disabled oninput="syncVal('s_contrib_threshold','v_contrib_threshold',2)">
+        <div style="font-size:11px;color:#718096;margin-top:2px">数字素养需达到此值才能为开源贡献</div>
+      </div>
+
+      <!-- Free-rider intensity -->
+      <div class="ctrl-row policy-ctrl disabled" id="row_freerider">
+        <div class="ctrl-label"><span>🥚 搦便车强度</span><span class="val" id="v_freerider">0.70</span></div>
+        <input type="range" id="s_freerider" min="0" max="0.9" step="0.05" value="0.7" disabled oninput="syncVal('s_freerider','v_freerider',2)">
+        <div style="font-size:11px;color:#718096;margin-top:2px">参与率越高时个人贡献意愿下降的程度</div>
+      </div>
+
+      <!-- Government intervention strength -->
+      <div class="ctrl-row policy-ctrl disabled" id="row_gov_strength">
+        <div class="ctrl-label"><span>🏛️ 政府激活强度</span><span class="val" id="v_gov_strength">0.00</span></div>
+        <input type="range" id="s_gov_strength" min="0" max="1" step="0.05" value="0.0" disabled oninput="syncVal('s_gov_strength','v_gov_strength',2)">
+        <div style="font-size:11px;color:#718096;margin-top:2px">0=不干预, 1=全力激活社区</div>
+      </div>
+
+      <!-- Policy type radio -->
+      <div class="ctrl-row policy-ctrl disabled" id="row_policy_type">
+        <div class="ctrl-label"><span>📋 政策类型</span></div>
+        <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
+          <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer">
+            <input type="radio" name="policyType" value="cost" checked disabled> 降成本
+          </label>
+          <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer">
+            <input type="radio" name="policyType" value="incentive" disabled> 激励
+          </label>
+          <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer">
+            <input type="radio" name="policyType" value="education" disabled> 培训
+          </label>
+        </div>
+        <div style="font-size:11px;color:#718096;margin-top:4px">
+          降成本→降低能力门槛 | 激励→降低搦便车 | 培训→提升整体素养
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">模拟参数</div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span>人口规模</span><span class="val" id="v_pop">200</span></div>
+        <input type="range" id="s_pop" min="100" max="500" step="50" value="200" oninput="syncVal('s_pop','v_pop',0)">
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-label"><span>模拟轮数</span><span class="val" id="v_rounds">50</span></div>
+        <input type="range" id="s_rounds" min="20" max="100" step="10" value="50" oninput="syncVal('s_rounds','v_rounds',0)">
+      </div>
+    </div>
+
+    <button class="run-btn" id="runBtn" onclick="onRunClick()">🚀 运行模拟</button>
+    <div class="sim-status" id="simStatus">就绪</div>
+
+  </aside>
+
+  <!-- ═══ MAIN ═══ -->
+  <main class="main">
+
+    <!-- Tab Buttons -->
+    <div class="tabs">
+      <button class="tab-btn active" id="tab_tool" onclick="switchTab('tool')">🔧 Tool Mode</button>
+      <button class="tab-btn"        id="tab_agent" onclick="switchTab('agent')">🤖 Agent Mode</button>
+      <button class="tab-btn"        id="tab_policy" onclick="switchTab('policy')">🎛️ Policy Lab</button>
+      <button class="tab-btn"        id="tab_compare" onclick="switchTab('compare')">📊 对比视图</button>
+      <button class="tab-btn"        id="tab_sensitivity" onclick="switchTab('sensitivity')">🔥 敏感性分析</button>
+      <button class="tab-btn"        id="tab_causal" onclick="switchTab('causal')">🔬 因果识别</button>
+    </div>
+
+    <!-- Mode Description -->
+    <div class="mode-desc" id="modeDesc"></div>
+
+    <!-- ═══ STANDARD VIEW (tabs: tool / agent / policy) ═══ -->
+    <div id="tab_standard_panel">
+      <!-- Stat Cards -->
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="label">最终基尼系数</div>
+          <div class="value" id="stat_gini">—</div>
+          <div class="sub">0=完全平等，1=极端不平等</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">基尼变化率</div>
+          <div class="value" id="stat_ginidelta">—</div>
+          <div class="sub delta" id="stat_ginidelta_sub"></div>
+        </div>
+        <div class="stat-card">
+          <div class="label">底层出局率</div>
+          <div class="value" id="stat_poor">—</div>
+          <div class="sub">财富&lt;100 人口占比</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">专业化转型幅度</div>
+          <div class="value" id="stat_domain">—</div>
+          <div class="sub">领域任务份额增量</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">社区参与率</div>
+          <div class="value" id="stat_participation">—</div>
+          <div class="sub">最终贡献者比例</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">临界点状态</div>
+          <div class="value" id="stat_critical" style="font-size:18px">—</div>
+          <div class="sub">网络效应启动（15%）</div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts-grid">
+        <div class="chart-card full-width">
+          <div class="chart-title"><div class="dot"></div>基尼系数演化轨迹</div>
+          <div id="chart_gini" style="height:260px"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title"><div class="dot"></div>最终财富分布（对数坐标）</div>
+          <div id="chart_wealth" style="height:240px"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title"><div class="dot"></div>任务组合演化（职业重组）</div>
+          <div id="chart_tasks" style="height:240px"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title"><div class="dot"></div>AI质量边界演化</div>
+          <div id="chart_quality" style="height:240px"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title"><div class="dot"></div>Tier分布演化</div>
+          <div id="chart_tier" style="height:240px"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title"><div class="dot"></div>社区参与率演化（集体行动困境）</div>
+          <div id="chart_community" style="height:240px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ COMPARE VIEW ═══ -->
+    <div id="tab_compare_panel">
+      <div class="compare-cols">
+        <!-- LEFT: Agent baseline (red tones) -->
+        <div class="compare-col left">
+          <div class="compare-col-title">🤖 基线（Agent Mode，无政府干预）</div>
+          <div id="cmp_gini_left" style="height:180px; margin-bottom:10px"></div>
+          <div id="cmp_wealth_left" style="height:160px; margin-bottom:10px"></div>
+          <div id="cmp_tasks_left" style="height:160px; margin-bottom:10px"></div>
+          <div id="cmp_community_left" style="height:160px"></div>
+        </div>
+        <!-- RIGHT: Policy lab (blue tones) -->
+        <div class="compare-col right">
+          <div class="compare-col-title">🎛️ 政策方案（启用政府干预）</div>
+          <div id="cmp_gini_right" style="height:180px; margin-bottom:10px"></div>
+          <div id="cmp_wealth_right" style="height:160px; margin-bottom:10px"></div>
+          <div id="cmp_tasks_right" style="height:160px; margin-bottom:10px"></div>
+          <div id="cmp_community_right" style="height:160px"></div>
+        </div>
+      </div>
+      <!-- Delta row -->
+      <div class="delta-row">
+        <h3>Δ 差异分析 — 政策效果量化</h3>
+        <div class="delta-metrics">
+          <div class="delta-metric">
+            <div class="dm-label">Δ 基尼系数</div>
+            <div class="dm-val" id="cmp_delta_gini">—</div>
+          </div>
+          <div class="delta-metric">
+            <div class="dm-label">Δ 底层出局率</div>
+            <div class="dm-val" id="cmp_delta_poor">—</div>
+          </div>
+          <div class="delta-metric">
+            <div class="dm-label">Δ 专业化幅度</div>
+            <div class="dm-val" id="cmp_delta_domain">—</div>
+          </div>
+          <div class="delta-metric">
+            <div class="dm-label">Δ 社区参与率</div>
+            <div class="dm-val" id="cmp_delta_participation">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SENSITIVITY HEATMAP ═══ -->
+    <div id="tab_sensitivity_panel">
+      <div class="sensitivity-controls">
+        <div>
+          <label>X轴参数：</label><br>
+          <select id="sens_x" style="margin-top:4px">
+            <option value="qFloor0">q_floor（开源质量下限）</option>
+            <option value="gOss">g_oss（开源增长率）</option>
+            <option value="gProp">g_prop（商业增长率）</option>
+            <option value="digitalBias">数字素养偏向</option>
+            <option value="wealthDigitalCorr">财富-素养相关性</option>
+            <option value="routineShare">常规任务占比</option>
+            <option value="mobility">职业转型速度</option>
+          </select>
+        </div>
+        <div>
+          <label>Y轴参数：</label><br>
+          <select id="sens_y" style="margin-top:4px">
+            <option value="qFloor0">q_floor（开源质量下限）</option>
+            <option value="gOss" selected>g_oss（开源增长率）</option>
+            <option value="gProp">g_prop（商业增长率）</option>
+            <option value="digitalBias">数字素养偏向</option>
+            <option value="wealthDigitalCorr">财富-素养相关性</option>
+            <option value="routineShare">常规任务占比</option>
+            <option value="mobility">职业转型速度</option>
+          </select>
+        </div>
+        <div>
+          <label>&nbsp;</label><br>
+          <button class="gen-btn" id="genHeatmapBtn" onclick="generateHeatmap()" style="margin-top:4px">生成热力图</button>
+        </div>
+        <div class="sensitivity-progress" id="sensProgress"></div>
+      </div>
+      <div class="chart-card full-width" style="margin-bottom:14px">
+        <div class="chart-title"><div class="dot"></div>基尼系数敏感性热力图（8×8网格，每格15轮×100智能体）</div>
+        <div id="chart_heatmap" style="height:420px"></div>
+      </div>
+      <div class="sensitivity-interpretation" id="sensitivityText">
+        选择X轴和Y轴参数，点击"生成热力图"开始分析。热力图展示不同参数组合下的最终基尼系数，蓝色=低不平等，红色=高不平等。
+      </div>
+    </div>
+
+    <!-- ═══ CAUSAL PANEL ═══ -->
+    <div id="tab_causal_panel">
+
+      <!-- 4a: RCT -->
+      <div class="causal-section">
+        <div class="causal-section-title">🎲 4a. 随机对照实验（RCT）</div>
+        <div class="causal-section-desc">
+          运行两场模拟：①自然分配（财富决定Tier）vs ②随机分配（Tier随机打乱）。
+          差异量化"选择偏差"的因果贡献，排除初始财富带来的内生性问题。
+        </div>
+        <button class="action-btn" id="rctBtn" onclick="runRCT()">运行随机分配实验</button>
+        <div id="chart_rct" style="height:220px; margin-bottom:10px; display:none"></div>
+        <div class="causal-result" id="rctResult"></div>
+      </div>
+
+      <!-- 4b: Placebo -->
+      <div class="causal-section">
+        <div class="causal-section-title">🃏 4b. 安慰剂检验</div>
+        <div class="causal-section-desc">
+          运行100次随机置换Tier分配的模拟，构建安慰剂分布。若实际基尼系数显著高于随机分布，
+          则排除"结果由随机因素驱动"的竞争性假说。
+        </div>
+        <button class="action-btn" id="placeboBtn" onclick="runPlacebo()">运行安慰剂检验（100次）</button>
+        <div id="chart_placebo" style="height:220px; margin-bottom:10px; display:none"></div>
+        <div class="causal-result" id="placeboResult"></div>
+      </div>
+
+      <!-- 4c: Exogenous Shock -->
+      <div class="causal-section">
+        <div class="causal-section-title">⚡ 4c. 外生冲击实验</div>
+        <div class="causal-section-desc">
+          模拟2026年算力涨价冲击：前15轮正常运行，第16轮所有Agent成本提升50%，再运行15轮。
+          断点回归设计识别冲击的因果效应。
+        </div>
+        <button class="action-btn" id="shockBtn" onclick="runShock()">注入算力涨价冲击</button>
+        <div id="chart_shock" style="height:220px; margin-bottom:10px; display:none"></div>
+        <div class="causal-result" id="shockResult"></div>
+      </div>
+
+      <!-- 4d: Mechanism Decomposition -->
+      <div class="causal-section">
+        <div class="causal-section-title">🔩 4d. 机制关闭实验（分解分析）</div>
+        <div class="causal-section-desc">
+          逐一关闭竞争机制、学习扩散、职业重组，量化每个机制对基尼系数的独立贡献。
+          通过反事实对比识别主导因果路径。
+        </div>
+        <button class="action-btn" id="mechBtn" onclick="runMechanism()">运行机制关闭实验</button>
+        <div id="chart_mechanism" style="height:240px; margin-bottom:10px; display:none"></div>
+        <div class="causal-result" id="mechResult"></div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT SIMULATION ENGINE
+══════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ──────── SEEDED PRNG ────────
+class SeededRandom {
+  constructor(seed) { this.seed = seed >>> 0 || 42; }
+  next() {
+    this.seed = (this.seed * 16807) % 2147483647;
+    return (this.seed - 1) / 2147483646;
+  }
+  normal(mu, sigma) {
+    let u1 = Math.max(1e-10, this.next());
+    let u2 = this.next();
+    return mu + sigma * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  }
+  lognormal(mu, sigma) { return Math.exp(this.normal(mu, sigma)); }
+  beta(alpha, betaParam) {
+    let u, v, x, y;
+    while (true) {
+      u = this.next(); v = this.next();
+      x = Math.pow(u, 1 / alpha);
+      y = Math.pow(v, 1 / betaParam);
+      if (x + y <= 1.0 && x + y > 0) return x / (x + y);
+    }
+  }
+}
+
+// ──────── GINI COEFFICIENT ────────
+function gini(arr) {
+  const sorted = arr.slice().sort((a, b) => a - b);
+  const n = sorted.length;
+  let sum = 0;
+  for (let i = 0; i < n; i++) sum += (i + 1) * sorted[i];
+  const total = sorted.reduce((a, b) => a + b, 0);
+  if (total === 0) return 0;
+  return (2 * sum) / (n * total) - (n + 1) / n;
+}
+
+// ──────── TIER SYSTEM ────────
+const TIERS = [
+  { maxW: 50,       cost: 0,    qCapFrac: 0 },
+  { maxW: 200,      cost: 0,    qCapFrac: 0.2 },
+  { maxW: 1000,     cost: 20,   qCapFrac: 0.5 },
+  { maxW: 5000,     cost: 150,  qCapFrac: 0.8 },
+  { maxW: Infinity, cost: 1000, qCapFrac: 1.0 },
+];
+
+function getTier(wealth) {
+  if (wealth < 50)   return 0;
+  if (wealth < 200)  return 1;
+  if (wealth < 1000) return 2;
+  if (wealth < 5000) return 3;
+  return 4;
+}
+function getTierCost(tier) { return TIERS[tier].cost; }
+function computeQGeneral(tier, qFloor, qMax, isToolMode) {
+  if (isToolMode) return 0.5;
+  const frac = TIERS[tier].qCapFrac;
+  return qFloor + frac * (qMax - qFloor);
+}
+
+// ──────── INIT AGENTS ────────
+function initAgents(params, rng) {
+  const { N, digitalBias, wealthDigitalCorr } = params;
+  const agents = [];
+  const maxWealth = Math.exp(params.wealthMu + 3.5 * params.wealthSigma);
+
+  for (let i = 0; i < N; i++) {
+    const age = Math.min(65, Math.max(22, Math.round(rng.normal(38, 12))));
+    const wealth = Math.max(5, rng.lognormal(params.wealthMu, params.wealthSigma));
+
+    let digitalBase = rng.beta(digitalBias, 2);
+    if (wealthDigitalCorr > 0) {
+      const wealthNorm = Math.min(1, Math.log(wealth + 1) / Math.log(maxWealth + 1));
+      const corr = wealthDigitalCorr;
+      digitalBase = (1 - corr) * digitalBase + corr * (0.3 + 0.7 * wealthNorm);
+    }
+    digitalBase = Math.min(1, Math.max(0.05, digitalBase));
+
+    const ability = 0.2 + 0.8 * rng.next();
+    const learningRate = 0.05 + 0.1 * (1 - age / 70) + 0.05 * digitalBase;
+
+    let r = rng.next(), f = rng.next();
+    const maxRoutine = params.routineShare;
+    const maxFrontier = params.frontierShare;
+    let tr = Math.min(maxRoutine + 0.15, Math.max(0.05, maxRoutine * (0.7 + 0.6 * r)));
+    let tf = Math.min(maxFrontier + 0.1, Math.max(0.02, maxFrontier * (0.7 + 0.6 * f)));
+    let td = Math.max(0.02, 1 - tr - tf);
+    const norm = tr + tf + td;
+    tr /= norm; tf /= norm; td /= norm;
+
+    agents.push({
+      id: i, age, wealth, ability,
+      digital: digitalBase, skill_ai: digitalBase,
+      learningRate,
+      taskRoutine: tr, taskFrontier: tf, taskDomain: td,
+      communityContrib: digitalBase * (1 - Math.min(1, wealth / maxWealth)),
+      tier: getTier(wealth),
+      initWealth: wealth,
+    });
+  }
+  return agents;
+}
+
+// ──────── BUILD SMALL-WORLD NETWORK ────────
+function buildNetwork(agents, k) {
+  const N = agents.length;
+  const neighbors = Array.from({ length: N }, () => []);
+  for (let i = 0; i < N; i++) {
+    for (let j = 1; j <= Math.floor(k / 2); j++) {
+      const nb = (i + j) % N;
+      neighbors[i].push(nb);
+      neighbors[nb].push(i);
+    }
+  }
+  for (let i = 0; i < N; i++) {
+    neighbors[i] = [...new Set(neighbors[i])];
+  }
+  return neighbors;
+}
+
+// ──────── MAIN SIMULATION ────────
+function runSimulation(params, mode, policyParams, opts) {
+  const { N, rounds, qFloor0, gOss, gProp, wealthMu, wealthSigma,
+    digitalBias, wealthDigitalCorr, routineShare, frontierShare, mobility, alpha } = params;
+  const isToolMode = (mode === 'tool');
+  const isPolicyMode = (mode === 'policy');
+  const options = opts || {};
+
+  const rng = new SeededRandom(params.seed || 12345);
+  const agents = initAgents(params, rng);
+
+  // If randomAssignment, shuffle tiers
+  if (options.randomTier) {
+    const tiers = agents.map(a => a.tier);
+    for (let i = tiers.length - 1; i > 0; i--) {
+      const j = Math.floor(rng.next() * (i + 1));
+      [tiers[i], tiers[j]] = [tiers[j], tiers[i]];
+    }
+    agents.forEach((a, i) => { a.tier = tiers[i]; });
+  }
+
+  const neighbors = buildNetwork(agents, 6);
+
+  const pol = policyParams || {};
+  const infra  = pol.infra  || 0;
+  const learn  = pol.learn  || 0;
+  const open   = pol.open   || 0;
+  const univ   = pol.univ   || 0;
+  const tax    = pol.tax    || 0;
+  const commCostReduce = pol.communityCostReduction || 0;
+
+  // For shock experiment: cost multiplier per round
+  const shockRound = options.shockRound || null;
+  const shockMul   = options.shockMul   || 1.5;
+
+  let qFloor = qFloor0;
+  let qMax = Math.max(0.9, qFloor + 0.4);
+
+  const giniHistory = [];
+  const taskRoutineHist = [], taskFrontierHist = [], taskDomainHist = [];
+  const qFloorHist = [], qMaxHist = [];
+  const tierCounts = [];
+  const communityParticipationHist = [];  // Track community participation rate
+
+  const maxWealth = agents.reduce((m, a) => Math.max(m, a.wealth), 0) * 2;
+
+  // For "no competition" variant: distribute routine proportionally
+  const noCompetition = options.noCompetition || false;
+  // For "no diffusion" variant: zero learning
+  const noDiffusion = options.noDiffusion || false;
+  // For "no restructuring" variant: skip career step
+  const noRestructuring = options.noRestructuring || false;
+
+  for (let round = 0; round < rounds; round++) {
+    // Shock: increase cost multiplier after shockRound
+    const costMul = (shockRound !== null && round >= shockRound) ? shockMul : 1;
+
+    agents.forEach(agent => {
+      // Re-compute tier from wealth (unless fixed by randomTier option — only set at init)
+      if (!options.randomTier) agent.tier = getTier(agent.wealth);
+      const qGen = computeQGeneral(agent.tier, qFloor, qMax, isToolMode);
+
+      let qGenEff = qGen;
+      if (isPolicyMode && univ > 0 && agent.tier <= 1) {
+        qGenEff = Math.min(qMax, qGen + univ * 0.3 * (qMax - qFloor));
+      }
+      let qMaxAccess = qMax;
+      if (isPolicyMode && open > 0) {
+        qMaxAccess = qMax * (1 - 0.05 * open);
+        qGenEff = Math.min(qMaxAccess, qGenEff * (1 + open * 0.1));
+      }
+      const qDomain = agent.skill_ai * qGenEff;
+      agent.qRoutine  = 0.7 * qGenEff + 0.3 * qDomain;
+      agent.qFrontier = 0.8 * qGenEff + 0.2 * qDomain;
+      agent.qDomain   = 0.3 * qGenEff + 0.7 * qDomain;
+
+      let cost = getTierCost(agent.tier) * costMul;
+      if (isPolicyMode && open > 0) cost = cost * (1 - 0.3 * open);
+      agent.monthlyCost = cost;
+    });
+
+    agents.forEach(agent => {
+      const matchBonus = 1 + 0.2 * agent.taskDomain;
+      agent.outRoutine  = Math.pow(agent.ability, alpha) * Math.pow(agent.qRoutine,  1 - alpha) * agent.taskRoutine;
+      agent.outFrontier = (agent.ability > 0.5 && agent.qFrontier > 0.3)
+        ? Math.pow(agent.ability, alpha) * Math.pow(agent.qFrontier, 1 - alpha) * agent.taskFrontier
+        : 0;
+      agent.outDomain   = Math.pow(agent.ability, alpha) * Math.pow(agent.qDomain, 1 - alpha) * agent.taskDomain * matchBonus;
+    });
+
+    // Routine income: winner-take-all or proportional
+    if (noCompetition) {
+      // Proportional for routine (no WTA)
+      const rPool = agents.reduce((s, a) => s + a.outRoutine * 100, 0);
+      const rTotal = agents.reduce((s, a) => s + a.outRoutine, 0.001);
+      agents.forEach(a => { a.incomeRoutine = (a.outRoutine / rTotal) * rPool; });
+    } else {
+      const sortedRoutine = agents.slice().sort((a, b) => b.outRoutine - a.outRoutine);
+      const topN = Math.ceil(0.2 * agents.length);
+      const routinePool = agents.reduce((s, a) => s + a.outRoutine * 100, 0);
+      agents.forEach(agent => { agent.incomeRoutine = 0; });
+      const topSum = sortedRoutine.slice(0, topN).reduce((s, x) => s + x.outRoutine, 0.001);
+      for (let i = 0; i < topN; i++) {
+        const a = sortedRoutine[i];
+        a.incomeRoutine = (routinePool / topN) * (a.outRoutine / topSum);
+      }
+    }
+
+    const frontierPool = agents.reduce((s, a) => s + a.outFrontier * 200, 0);
+    const frontierTotal = agents.reduce((s, a) => s + a.outFrontier, 0.001);
+    agents.forEach(agent => {
+      agent.incomeFrontier = (agent.outFrontier / frontierTotal) * frontierPool;
+    });
+
+    const domainPool = agents.reduce((s, a) => s + a.outDomain * 150, 0);
+    const domainTotal = agents.reduce((s, a) => s + a.outDomain, 0.001);
+    agents.forEach(agent => {
+      agent.incomeDomain = (agent.outDomain / domainTotal) * domainPool;
+    });
+
+    agents.forEach(agent => {
+      let income = agent.incomeRoutine + agent.incomeFrontier + agent.incomeDomain;
+      if (isPolicyMode && tax > 0) {
+        const taxAmount = income * tax;
+        income -= taxAmount;
+      }
+      if (isPolicyMode && tax > 0) {
+        if (agent.tier <= 1) {
+          const taxPool = agents.reduce((s, a) => s + (a.incomeRoutine + a.incomeFrontier + a.incomeDomain) * tax, 0);
+          const bottomCount = agents.filter(a => a.tier <= 1).length;
+          income += taxPool / Math.max(1, bottomCount);
+        }
+      }
+      const newWealth = agent.wealth * 0.9 + income * 0.1 - agent.monthlyCost;
+      agent.wealth = Math.max(1, newWealth);
+    });
+
+    if (!noRestructuring) {
+      agents.forEach(agent => {
+        const transSpeed = mobility * agent.skill_ai * Math.log(agent.wealth + 10) / 10;
+        const effSpeed = isPolicyMode ? transSpeed * (1 + learn * 0.5) : transSpeed;
+        const dRoutine  = -effSpeed * agent.taskRoutine * 0.4;
+        const dDomain   =  effSpeed * (1 - agent.taskDomain) * 0.3;
+        const dFrontier =  effSpeed * (1 - agent.taskFrontier) * 0.1;
+        let newR = Math.max(0.02, agent.taskRoutine + dRoutine);
+        let newD = Math.min(0.95, agent.taskDomain  + dDomain);
+        let newF = Math.max(0.01, agent.taskFrontier + dFrontier);
+        const norm = newR + newD + newF;
+        agent.taskRoutine = newR / norm;
+        agent.taskDomain  = newD / norm;
+        agent.taskFrontier = newF / norm;
+      });
+    }
+
+    if (!noDiffusion) {
+      const learnAccel = isPolicyMode ? (1 + learn * 0.8) : 1;
+      const openSpillover = isPolicyMode ? (1 + open * 0.4) : 1;
+      const newSkillAI = agents.map(agent => agent.skill_ai);
+      agents.forEach((agent, i) => {
+        const nbList = neighbors[i];
+        if (nbList.length === 0) return;
+        let gained = 0, count = 0;
+        nbList.forEach(j => {
+          const nb = agents[j];
+          if (nb.skill_ai > agent.skill_ai) {
+            const tierDiff = Math.abs(nb.tier - agent.tier);
+            const spillEff = tierDiff > 0 ? openSpillover * 0.7 : 1.0;
+            gained += (nb.skill_ai - agent.skill_ai) * agent.learningRate * learnAccel * spillEff;
+            count++;
+          }
+        });
+        if (count > 0) newSkillAI[i] = Math.min(1, agent.skill_ai + gained / count);
+      });
+      agents.forEach((agent, i) => { agent.skill_ai = newSkillAI[i]; });
+    }
+
+    // ── TRIPARTITE GAME: Market-Community-Government ──
+
+    // Extract community-government parameters
+    const contribThreshold = isPolicyMode ? pol.contribThreshold : 0.5;
+    const freeRiderBase = isPolicyMode ? pol.freeRider : 0.7;
+    const govStrength = isPolicyMode ? pol.govStrength : 0.0;
+    const policyType = isPolicyMode ? pol.policyType : 'cost';
+
+    // Government policy effects on community parameters
+    let effectiveThreshold = contribThreshold;
+    let effectiveFreeRider = freeRiderBase;
+    let digitalBoost = 0;
+
+    if (govStrength > 0) {
+      if (policyType === 'cost') {
+        // Lower contribution barrier: threshold drops
+        effectiveThreshold = contribThreshold * (1 - govStrength * 0.6);
+      } else if (policyType === 'incentive') {
+        // Reduce free-riding: weaker free-rider effect
+        effectiveFreeRider = freeRiderBase * (1 - govStrength * 0.5);
+      } else if (policyType === 'education') {
+        // Boost digital literacy distribution
+        digitalBoost = govStrength * 0.02; // per-round boost to all agents' digital
+      }
+    }
+
+    // Apply education policy: boost everyone's digital literacy slightly
+    if (digitalBoost > 0) {
+      agents.forEach(a => {
+        a.digital = Math.min(1, a.digital + digitalBoost);
+      });
+    }
+
+    // Each agent decides whether to contribute (active decision)
+    let contributors = 0;
+    agents.forEach(agent => {
+      const canContribute = agent.digital > effectiveThreshold;
+      if (!canContribute) {
+        agent.communityContrib = 0;
+        return;
+      }
+
+      // Free-rider calculation: when participation rate is high, individual incentive drops
+      const currentRate = contributors / Math.max(1, agents.length);
+      const freeRideProb = currentRate * effectiveFreeRider;
+      const willContribute = rng.next() > freeRideProb;
+
+      if (willContribute) {
+        // Contribution strength proportional to skill
+        agent.communityContrib = agent.digital * (1 - Math.min(1, agent.wealth / maxWealth));
+        contributors++;
+      } else {
+        agent.communityContrib = 0; // Free-rider
+      }
+    });
+
+    const participationRate = contributors / agents.length;
+
+    // Critical mass threshold: network effect at 15%
+    let g_oss_effective;
+    if (participationRate < 0.01) {
+      g_oss_effective = gOss * 0.3; // Almost no community, very slow
+    } else {
+      g_oss_effective = gOss * Math.sqrt(participationRate / 0.1);
+      if (participationRate > 0.15) {
+        g_oss_effective *= 1.5; // Network effect explosion!
+      }
+    }
+
+    const avgGamma = agents.reduce((s, a) => s + a.communityContrib, 0) / agents.length;
+
+    // Policy interaction effects (keep existing ones, add new)
+    let infraBonus = 0;
+    let ossBoostMul = 1;
+    if (isPolicyMode) {
+      infraBonus = 0.02 * infra * learn;
+      ossBoostMul = 1 + 0.015 * open * avgGamma * 10;
+      const taxTension = -0.01 * tax * avgGamma;
+      ossBoostMul = Math.max(0.8, ossBoostMul + taxTension);
+      const univLearnBonus = 0.01 * univ * learn;
+      infraBonus += univLearnBonus;
+
+      // NEW: Government-community synergy
+      // Government strength × participation rate = amplified q_floor growth
+      const govCommunitySynergy = govStrength * participationRate * 0.03;
+      infraBonus += govCommunitySynergy;
+
+      // Community cost reduction policy effect (from existing slider)
+      const commCostEffect = commCostReduce * participationRate * 0.02;
+      infraBonus += commCostEffect;
+    }
+
+    // q_floor growth now uses community-driven g_oss_effective instead of raw gOss
+    const baseGrowth = g_oss_effective * (1 + avgGamma * 0.05);
+    qFloor = Math.min(qMax * 0.95, qFloor * (1 + baseGrowth * ossBoostMul + infraBonus));
+    qMax = Math.min(1.0, qMax * (1 + gProp));
+    if (isPolicyMode && open > 0) qMax = Math.max(qFloor + 0.05, qMax * (1 - 0.003 * open));
+
+    qFloorHist.push(qFloor);
+    qMaxHist.push(qMax);
+    giniHistory.push(gini(agents.map(a => a.wealth)));
+
+    taskRoutineHist.push(agents.reduce((s, a) => s + a.taskRoutine, 0) / agents.length);
+    taskFrontierHist.push(agents.reduce((s, a) => s + a.taskFrontier, 0) / agents.length);
+    taskDomainHist.push(agents.reduce((s, a) => s + a.taskDomain, 0) / agents.length);
+
+    communityParticipationHist.push(participationRate || 0);
+
+    const tc = [0, 0, 0, 0, 0];
+    agents.forEach(a => tc[a.tier]++);
+    tierCounts.push(tc);
+  }
+
+  return {
+    agents,
+    giniHistory,
+    taskRoutineHist, taskFrontierHist, taskDomainHist,
+    qFloorHist, qMaxHist,
+    tierCounts,
+    communityParticipationHist,
+  };
+}
+
+// ──────── GLOBAL STATE ────────
+let currentMode = 'tool';
+let lastResults = null;
+let _toolResult = null;
+let _agentResult = null;
+let _policyResult = null;
+let _activePreset = null;
+
+// ──────── SYNC SLIDER VALUE ────────
+function syncVal(sliderId, valId, decimals) {
+  const v = parseFloat(document.getElementById(sliderId).value);
+  document.getElementById(valId).textContent = v.toFixed(decimals);
+}
+
+// ──────── GET PARAMS FROM UI ────────
+function getParams() {
+  return {
+    N: parseInt(document.getElementById('s_pop').value),
+    rounds: parseInt(document.getElementById('s_rounds').value),
+    qFloor0: parseFloat(document.getElementById('s_qfloor').value),
+    gOss: parseFloat(document.getElementById('s_goss').value),
+    gProp: parseFloat(document.getElementById('s_gprop').value),
+    digitalBias: parseFloat(document.getElementById('s_dbias').value),
+    wealthDigitalCorr: parseFloat(document.getElementById('s_wcorr').value),
+    routineShare: parseFloat(document.getElementById('s_routine').value),
+    frontierShare: parseFloat(document.getElementById('s_frontier').value),
+    mobility: parseFloat(document.getElementById('s_mobility').value),
+    alpha: 0.4,
+    wealthMu: 10.5,
+    wealthSigma: 1.2,
+    seed: 12345,
+  };
+}
+
+function getPolicyParams() {
+  const policyTypeEl = document.querySelector('input[name="policyType"]:checked');
+  return {
+    infra: parseFloat(document.getElementById('s_infra').value),
+    learn: parseFloat(document.getElementById('s_learn').value),
+    open:  parseFloat(document.getElementById('s_open').value),
+    univ:  parseFloat(document.getElementById('s_univ').value),
+    tax:   parseFloat(document.getElementById('s_tax').value),
+    communityCostReduction: parseFloat(document.getElementById('s_community_cost').value),
+    contribThreshold: parseFloat(document.getElementById('s_contrib_threshold').value),
+    freeRider: parseFloat(document.getElementById('s_freerider').value),
+    govStrength: parseFloat(document.getElementById('s_gov_strength').value),
+    policyType: policyTypeEl ? policyTypeEl.value : 'cost',
+  };
+}
+
+// ──────── MODE DESCRIPTIONS ────────
+const modeDescriptions = {
+  tool:        '<strong>🔧 Tool Mode — AI平权基准：</strong>所有智能体获得相同质量的AI工具（q=0.5），验证AI普惠化的基准效果。财富差异保留，但AI访问质量对所有人拉平。',
+  agent:       '<strong>🤖 Agent Mode — 当前现实：</strong>AI智能体质量与财富挂钩（分级Tier系统），马太效应显现。高财富→高Tier→更优AI→更高收益，形成正反馈循环。',
+  policy:      '<strong>🎛️ Policy Lab — 政策实验室：</strong>政策滑块激活，模拟叠加基础设施、学习加速、平台开放、普惠服务和再分配税五类干预的交互效应（协同增效与张力权衡）。图表同时显示三条轨迹对比。<strong>新增：</strong>包含社区-政府博弈维度：搭便车困境、临界质量效应、三种政策类型对比。',
+  compare:     '<strong>📊 对比视图 — 基线 vs 政策：</strong>左侧红色为Agent Mode基线（无政策），右侧蓝色为当前政策方案效果。底部Δ行量化两者差异，评估政策净效果。',
+  sensitivity: '<strong>🔥 敏感性分析：</strong>二维热力图，展示任意两个参数组合对基尼系数的影响。颜色越蓝，最终不平等越低；颜色越红，不平等越高。快速识别最敏感的政策杠杆。',
+  causal:      '<strong>🔬 因果识别 — 计量经济学稳健性检验：</strong>通过RCT、安慰剂检验、外生冲击和机制关闭实验，建立Agent质量对收入分配的因果关系，回应经济学家对内生性的质疑。',
+};
+
+// ──────── SWITCH TAB ────────
+function switchTab(mode) {
+  currentMode = mode;
+
+  const allTabs = ['tool', 'agent', 'policy', 'compare', 'sensitivity', 'causal'];
+  allTabs.forEach(m => {
+    document.getElementById('tab_' + m).classList.toggle('active', m === mode);
+  });
+
+  // Show/hide panels
+  const isStandard = ['tool', 'agent', 'policy'].includes(mode);
+  document.getElementById('tab_standard_panel').style.display    = isStandard ? 'block' : 'none';
+  document.getElementById('tab_compare_panel').style.display     = mode === 'compare' ? 'block' : 'none';
+  document.getElementById('tab_sensitivity_panel').style.display = mode === 'sensitivity' ? 'block' : 'none';
+  document.getElementById('tab_causal_panel').style.display      = mode === 'causal' ? 'block' : 'none';
+
+  // Policy sliders: enabled in policy and compare mode
+  const policyEnabled = (mode === 'policy' || mode === 'compare');
+  const policySliders = [
+    's_infra','s_learn','s_open','s_univ','s_tax','s_community_cost',
+    's_contrib_threshold','s_freerider','s_gov_strength'
+  ];
+  const policyRows = [
+    'row_infra','row_learn','row_open','row_univ','row_tax','row_community_cost',
+    'row_contrib_threshold','row_freerider','row_gov_strength','row_policy_type'
+  ];
+  policySliders.forEach(id => {
+    document.getElementById(id).disabled = !policyEnabled;
+  });
+  policyRows.forEach(id => {
+    document.getElementById(id).classList.toggle('disabled', !policyEnabled);
+  });
+  // Enable/disable radio buttons for policy type
+  document.querySelectorAll('input[name="policyType"]').forEach(r => {
+    r.disabled = !policyEnabled;
+  });
+
+  document.getElementById('modeDesc').innerHTML = modeDescriptions[mode] || '';
+
+  if (isStandard) {
+    runSimulationAndRender();
+  } else if (mode === 'compare') {
+    runCompareView();
+  }
+  // Sensitivity and causal are triggered by their own buttons
+}
+
+// ──────── FORMAT NUMBERS ────────
+function fmt(v, d) { return (isNaN(v) || v === null) ? '—' : v.toFixed(d); }
+
+// ──────── UPDATE STAT CARDS ────────
+function updateStats(res, baselineRes) {
+  const giniVals = res.giniHistory;
+  const finalGini = giniVals[giniVals.length - 1];
+  const initGini  = giniVals[0];
+  const delta = ((finalGini - initGini) / (initGini + 0.001)) * 100;
+
+  document.getElementById('stat_gini').textContent = fmt(finalGini, 3);
+
+  const deltaEl = document.getElementById('stat_ginidelta');
+  deltaEl.textContent = (delta >= 0 ? '+' : '') + fmt(delta, 1) + '%';
+  deltaEl.className = 'value delta ' + (delta >= 0 ? 'pos' : 'neg');
+
+  const sub = document.getElementById('stat_ginidelta_sub');
+  sub.textContent = delta >= 0 ? '↑ 不平等加剧' : '↓ 不平等缓解';
+  sub.className = 'sub delta ' + (delta >= 0 ? 'pos' : 'neg');
+
+  const poorFrac = res.agents.filter(a => a.wealth < 100).length / res.agents.length;
+  document.getElementById('stat_poor').textContent = (poorFrac * 100).toFixed(1) + '%';
+
+  const initDomain = res.taskDomainHist[0];
+  const finalDomain = res.taskDomainHist[res.taskDomainHist.length - 1];
+  const domainDelta = finalDomain - initDomain;
+  document.getElementById('stat_domain').textContent = (domainDelta >= 0 ? '+' : '') + (domainDelta * 100).toFixed(1) + 'pp';
+
+  // Community participation stats
+  const cpHist = res.communityParticipationHist;
+  const finalParticipation = cpHist[cpHist.length - 1] || 0;
+  document.getElementById('stat_participation').textContent = (finalParticipation * 100).toFixed(1) + '%';
+
+  const crossedCritical = cpHist.some(r => r > 0.15);
+  const critEl = document.getElementById('stat_critical');
+  critEl.textContent = crossedCritical ? '✓ 已跨越' : '✗ 未达到';
+  critEl.style.color = crossedCritical ? '#16a34a' : '#dc2626';
+}
+
+// ──────── PLOTLY LAYOUT HELPER ────────
+function baseLayout(overrides) {
+  return Object.assign({
+    margin: { l: 48, r: 16, t: 10, b: 40 },
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: 'rgba(247,249,253,0.7)',
+    font: { family: '-apple-system, "PingFang SC", sans-serif', size: 11, color: '#4a5568' },
+    xaxis: { gridcolor: '#edf2f7', zeroline: false, showline: false },
+    yaxis: { gridcolor: '#edf2f7', zeroline: false, showline: false },
+    legend: { bgcolor: 'rgba(255,255,255,0.8)', bordercolor: '#e2e8f0', borderwidth: 1, font: { size: 10 } },
+    showlegend: true,
+    hovermode: 'x unified',
+  }, overrides);
+}
+
+const PC = {
+  tool:   '#94a3b8',
+  agent:  '#ef4444',
+  policy: '#6366f1',
+  floor:  '#22c55e',
+  cap:    '#3b82f6',
+  t0: '#ef4444', t1: '#f97316', t2: '#22c55e', t3: '#3b82f6', t4: '#a855f7',
+};
+
+// ──────── CHART 1: GINI EVOLUTION ────────
+function renderGiniChart(toolRes, agentRes, policyRes, mode) {
+  const rounds = toolRes.giniHistory.length;
+  const xs = Array.from({ length: rounds }, (_, i) => i + 1);
+  const traces = [];
+
+  if (mode === 'tool') {
+    traces.push({
+      x: xs, y: toolRes.giniHistory,
+      mode: 'lines', name: '🔧 Tool Mode',
+      line: { color: PC.tool, width: 2.5, dash: 'dash' },
+      fill: 'tozeroy', fillcolor: 'rgba(148,163,184,0.1)',
+    });
+  } else if (mode === 'agent') {
+    traces.push({
+      x: xs, y: agentRes.giniHistory,
+      mode: 'lines', name: '🤖 Agent Mode',
+      line: { color: PC.agent, width: 2.5 },
+      fill: 'tozeroy', fillcolor: 'rgba(239,68,68,0.08)',
+    });
+  } else {
+    traces.push({
+      x: xs, y: toolRes.giniHistory,
+      mode: 'lines', name: '🔧 Tool基准',
+      line: { color: PC.tool, width: 2, dash: 'dash' },
+    });
+    traces.push({
+      x: xs, y: agentRes.giniHistory,
+      mode: 'lines', name: '🤖 Agent基准',
+      line: { color: PC.agent, width: 2 },
+    });
+    traces.push({
+      x: xs, y: policyRes.giniHistory,
+      mode: 'lines', name: '🎛️ 政策方案',
+      line: { color: PC.policy, width: 3 },
+      fill: 'tozeroy', fillcolor: 'rgba(99,102,241,0.08)',
+    });
+  }
+
+  Plotly.react('chart_gini', traces, baseLayout({
+    yaxis: { title: '基尼系数', gridcolor: '#edf2f7', zeroline: false, range: [0, 1] },
+    xaxis: { title: '模拟轮次', gridcolor: '#edf2f7', zeroline: false },
+    showlegend: true,
+  }), { responsive: true, displayModeBar: false });
+}
+
+// ──────── CHART 2: WEALTH HISTOGRAM ────────
+function renderWealthChart(res) {
+  const wealths = res.agents.map(a => a.wealth);
+  const logW = wealths.map(w => Math.log10(Math.max(1, w)));
+
+  Plotly.react('chart_wealth', [{
+    x: logW, type: 'histogram', nbinsx: 30, name: '财富分布',
+    marker: {
+      color: logW,
+      colorscale: [[0, '#c4b5fd'], [0.5, '#818cf8'], [1, '#4f46e5']],
+      showscale: false,
+    },
+  }], baseLayout({
+    xaxis: {
+      title: 'log₁₀(财富)', gridcolor: '#edf2f7',
+      tickvals: [1, 2, 3, 4, 5, 6],
+      ticktext: ['10', '100', '1K', '10K', '100K', '1M'],
+    },
+    yaxis: { title: '人数', gridcolor: '#edf2f7', zeroline: false },
+    showlegend: false, bargap: 0.04,
+  }), { responsive: true, displayModeBar: false });
+}
+
+// ──────── CHART 3: TASK STACKED AREA ────────
+function renderTaskChart(res) {
+  const rounds = res.taskRoutineHist.length;
+  const xs = Array.from({ length: rounds }, (_, i) => i + 1);
+
+  Plotly.react('chart_tasks', [
+    { x: xs, y: res.taskRoutineHist,  type: 'scatter', mode: 'lines', name: '常规任务',
+      stackgroup: 'one', fillcolor: 'rgba(255,107,107,0.75)', line: { color: '#ff6b6b', width: 0 } },
+    { x: xs, y: res.taskFrontierHist, type: 'scatter', mode: 'lines', name: '边界任务',
+      stackgroup: 'one', fillcolor: 'rgba(78,205,196,0.75)', line: { color: '#4ecdc4', width: 0 } },
+    { x: xs, y: res.taskDomainHist,   type: 'scatter', mode: 'lines', name: '领域任务',
+      stackgroup: 'one', fillcolor: 'rgba(149,225,211,0.75)', line: { color: '#95e1d3', width: 0 } },
+  ], baseLayout({
+    xaxis: { title: '模拟轮次', gridcolor: '#edf2f7' },
+    yaxis: { title: '平均任务份额', gridcolor: '#edf2f7', range: [0, 1] },
+    showlegend: true,
+  }), { responsive: true, displayModeBar: false });
+}
+
+// ──────── CHART 4: QUALITY BOUNDARIES ────────
+function renderQualityChart(res) {
+  const rounds = res.qFloorHist.length;
+  const xs = Array.from({ length: rounds }, (_, i) => i + 1);
+  const gap = res.qFloorHist.map((f, i) => res.qMaxHist[i] - f);
+  const gapShrinking = gap[0] > gap[gap.length - 1];
+  const midR = Math.floor(rounds / 2);
+  const annotation = {
+    x: midR + 1, y: (res.qFloorHist[midR] + res.qMaxHist[midR]) / 2,
+    text: gapShrinking ? '差距收窄 ✓' : '差距扩大 ⚠',
+    showarrow: false,
+    font: { size: 10, color: gapShrinking ? '#22c55e' : '#ef4444' },
+    bgcolor: 'rgba(255,255,255,0.85)',
+    bordercolor: gapShrinking ? '#22c55e' : '#ef4444',
+    borderwidth: 1, borderpad: 3,
+  };
+
+  Plotly.react('chart_quality', [
+    { x: xs, y: res.qMaxHist, mode: 'lines', name: 'q_max (商业上限)',
+      line: { color: PC.cap, width: 2.5 }, fill: 'tonexty', fillcolor: 'rgba(99,102,241,0.07)' },
+    { x: xs, y: res.qFloorHist, mode: 'lines', name: 'q_floor (开源下限)',
+      line: { color: PC.floor, width: 2.5 }, fill: 'tozeroy', fillcolor: 'rgba(34,197,94,0.08)' },
+  ], baseLayout({
+    xaxis: { title: '模拟轮次', gridcolor: '#edf2f7' },
+    yaxis: { title: 'AI质量', gridcolor: '#edf2f7', range: [0, 1.05] },
+    showlegend: true, annotations: [annotation],
+  }), { responsive: true, displayModeBar: false });
+}
+
+// ──────── CHART 5: TIER DISTRIBUTION ────────
+function renderTierChart(res) {
+  const rounds = res.tierCounts.length;
+  const xs = Array.from({ length: rounds }, (_, i) => i + 1);
+  const tiers = [0, 1, 2, 3, 4];
+  const colors = [PC.t0, PC.t1, PC.t2, PC.t3, PC.t4];
+  const names = ['Tier 0 (免费最低层)', 'Tier 1 (基础免费)', 'Tier 2 ($20/月)', 'Tier 3 ($150/月)', 'Tier 4 ($1000/月)'];
+
+  const traces = tiers.map(t => ({
+    x: xs,
+    y: res.tierCounts.map(tc => tc[t]),
+    name: names[t], type: 'bar',
+    marker: { color: colors[t] },
+  }));
+
+  Plotly.react('chart_tier', traces, baseLayout({
+    barmode: 'stack',
+    xaxis: { title: '模拟轮次', gridcolor: '#edf2f7' },
+    yaxis: { title: '人数', gridcolor: '#edf2f7' },
+    showlegend: true,
+    legend: { orientation: 'h', y: -0.25, font: { size: 9 } },
+  }), { responsive: true, displayModeBar: false });
+}
+
+// ──────── CHART 6: COMMUNITY PARTICIPATION ────────
+function renderCommunityChart(toolRes, agentRes, policyRes, mode, divId) {
+  const rounds = toolRes.communityParticipationHist.length;
+  const xs = Array.from({ length: rounds }, (_, i) => i + 1);
+  const targetDiv = divId || 'chart_community';
+
+  const traces = [];
+
+  if (mode === 'policy') {
+    // Show all three for comparison in policy mode
+    traces.push({
+      x: xs, y: toolRes.communityParticipationHist,
+      type: 'scatter', mode: 'lines',
+      name: '🔧 Tool基准', line: { color: PC.tool, width: 2, dash: 'dash' },
+    });
+    traces.push({
+      x: xs, y: agentRes.communityParticipationHist,
+      type: 'scatter', mode: 'lines',
+      name: '🤖 Agent基准', line: { color: PC.agent, width: 2 },
+    });
+    traces.push({
+      x: xs, y: policyRes.communityParticipationHist,
+      type: 'scatter', mode: 'lines',
+      name: '🎛️ 政策方案', line: { color: '#10b981', width: 3 },
+      fill: 'tozeroy', fillcolor: 'rgba(16,185,129,0.1)',
+    });
+  } else {
+    const res = mode === 'tool' ? toolRes : agentRes;
+    const color = mode === 'tool' ? PC.tool : PC.agent;
+    traces.push({
+      x: xs, y: res.communityParticipationHist,
+      type: 'scatter', mode: 'lines',
+      line: { color: color, width: 3 },
+      fill: 'tozeroy', fillcolor: 'rgba(16,185,129,0.1)',
+      name: '社区参与率',
+    });
+  }
+
+  Plotly.react(targetDiv, traces, baseLayout({
+    yaxis: { title: '贡献者比例', tickformat: '.0%', gridcolor: '#edf2f7', zeroline: false, range: [0, 1] },
+    xaxis: { title: '模拟轮次', gridcolor: '#edf2f7' },
+    showlegend: mode === 'policy',
+    shapes: [{
+      type: 'line',
+      x0: 1, x1: rounds,
+      y0: 0.15, y1: 0.15,
+      line: { color: '#ef4444', width: 2, dash: 'dash' },
+    }],
+    annotations: [{
+      x: Math.round(rounds * 0.75),
+      y: 0.18,
+      text: '← 临界点（网络效应启动 15%）',
+      showarrow: false,
+      font: { color: '#ef4444', size: 10 },
+      bgcolor: 'rgba(255,255,255,0.8)',
+    }],
+  }), { responsive: true, displayModeBar: false });
+}
+
+// ──────── RUN ALL AND RENDER (STANDARD TABS) ────────
+function runSimulationAndRender() {
+  const btn = document.getElementById('runBtn');
+  const status = document.getElementById('simStatus');
+  btn.classList.add('running');
+  btn.textContent = '⏳ 模拟中...';
+  status.textContent = '正在运行模拟...';
+
+  setTimeout(() => {
+    try {
+      const params = getParams();
+      const policyParams = getPolicyParams();
+
+      _toolResult   = runSimulation(params, 'tool', null);
+      _agentResult  = runSimulation(params, 'agent', null);
+      _policyResult = runSimulation(params, 'policy', policyParams);
+
+      const res = currentMode === 'tool' ? _toolResult
+        : currentMode === 'agent' ? _agentResult
+        : _policyResult;
+
+      renderGiniChart(_toolResult, _agentResult, _policyResult, currentMode);
+      renderWealthChart(res);
+      renderTaskChart(res);
+      renderQualityChart(res);
+      renderTierChart(res);
+      renderCommunityChart(_toolResult, _agentResult, _policyResult, currentMode);
+      updateStats(res, _agentResult);
+
+      status.textContent = `完成 · ${params.N} 个智能体 · ${params.rounds} 轮`;
+    } catch (e) {
+      status.textContent = '模拟出错: ' + e.message;
+      console.error(e);
+    }
+    btn.classList.remove('running');
+    btn.textContent = '🚀 运行模拟';
+  }, 20);
+}
+
+function onRunClick() {
+  const btn = document.getElementById('runBtn');
+  if (btn.classList.contains('running')) return;
+  // Clear active preset since user manually changed something
+  _activePreset = null;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active-preset'));
+  runSimulationAndRender();
+}
+
+// ═══════════════════════════════════════════
+// FEATURE 3: PRESET SCENARIOS
+// ═══════════════════════════════════════════
+const PRESETS = {
+  conservative: {
+    label: '🔒 保守场景',
+    msg: '开源弱、数字鸿沟大、职业流动低——最悲观预测',
+    values: {
+      s_qfloor: { v: 0.15, dec: 2, vid: 'v_qfloor' },
+      s_goss:   { v: 0.01, dec: 3, vid: 'v_goss' },
+      s_gprop:  { v: 0.05, dec: 3, vid: 'v_gprop' },
+      s_dbias:  { v: 1.5,  dec: 1, vid: 'v_dbias' },
+      s_wcorr:  { v: 0.6,  dec: 1, vid: 'v_wcorr' },
+      s_routine: { v: 0.6, dec: 2, vid: 'v_routine' },
+      s_frontier:{ v: 0.15,dec: 2, vid: 'v_frontier' },
+      s_mobility:{ v: 0.02,dec: 2, vid: 'v_mobility' },
+      s_infra:  { v: 0.0, dec: 2, vid: 'v_infra' },
+      s_learn:  { v: 0.0, dec: 2, vid: 'v_learn' },
+      s_open:   { v: 0.0, dec: 2, vid: 'v_open' },
+      s_univ:   { v: 0.0, dec: 2, vid: 'v_univ' },
+      s_tax:    { v: 0.0, dec: 2, vid: 'v_tax' },
+      s_community_cost:     { v: 0.0, dec: 2, vid: 'v_community_cost' },
+      s_contrib_threshold:  { v: 0.6, dec: 2, vid: 'v_contrib_threshold' },
+      s_freerider:          { v: 0.8, dec: 2, vid: 'v_freerider' },
+      s_gov_strength:       { v: 0.0, dec: 2, vid: 'v_gov_strength' },
+    }
+  },
+  balanced: {
+    label: '⚖️ 中性场景',
+    msg: '当前现实的近似参数——基准预测',
+    values: {
+      s_qfloor: { v: 0.35, dec: 2, vid: 'v_qfloor' },
+      s_goss:   { v: 0.025,dec: 3, vid: 'v_goss' },
+      s_gprop:  { v: 0.04, dec: 3, vid: 'v_gprop' },
+      s_dbias:  { v: 2.5,  dec: 1, vid: 'v_dbias' },
+      s_wcorr:  { v: 0.3,  dec: 1, vid: 'v_wcorr' },
+      s_routine: { v: 0.5, dec: 2, vid: 'v_routine' },
+      s_frontier:{ v: 0.25,dec: 2, vid: 'v_frontier' },
+      s_mobility:{ v: 0.05,dec: 2, vid: 'v_mobility' },
+      s_infra:  { v: 0.0, dec: 2, vid: 'v_infra' },
+      s_learn:  { v: 0.0, dec: 2, vid: 'v_learn' },
+      s_open:   { v: 0.0, dec: 2, vid: 'v_open' },
+      s_univ:   { v: 0.0, dec: 2, vid: 'v_univ' },
+      s_tax:    { v: 0.0, dec: 2, vid: 'v_tax' },
+      s_community_cost:     { v: 0.0, dec: 2, vid: 'v_community_cost' },
+      s_contrib_threshold:  { v: 0.5, dec: 2, vid: 'v_contrib_threshold' },
+      s_freerider:          { v: 0.7, dec: 2, vid: 'v_freerider' },
+      s_gov_strength:       { v: 0.0, dec: 2, vid: 'v_gov_strength' },
+    }
+  },
+  aggressive: {
+    label: '🚀 激进场景',
+    msg: '开源追上商业、数字素养普及、高流动性——最乐观预测',
+    values: {
+      s_qfloor: { v: 0.5,  dec: 2, vid: 'v_qfloor' },
+      s_goss:   { v: 0.06, dec: 3, vid: 'v_goss' },
+      s_gprop:  { v: 0.03, dec: 3, vid: 'v_gprop' },
+      s_dbias:  { v: 4.0,  dec: 1, vid: 'v_dbias' },
+      s_wcorr:  { v: 0.1,  dec: 1, vid: 'v_wcorr' },
+      s_routine: { v: 0.35,dec: 2, vid: 'v_routine' },
+      s_frontier:{ v: 0.30,dec: 2, vid: 'v_frontier' },
+      s_mobility:{ v: 0.12,dec: 2, vid: 'v_mobility' },
+      s_infra:  { v: 0.0, dec: 2, vid: 'v_infra' },
+      s_learn:  { v: 0.0, dec: 2, vid: 'v_learn' },
+      s_open:   { v: 0.0, dec: 2, vid: 'v_open' },
+      s_univ:   { v: 0.0, dec: 2, vid: 'v_univ' },
+      s_tax:    { v: 0.0, dec: 2, vid: 'v_tax' },
+      s_community_cost:     { v: 0.0, dec: 2, vid: 'v_community_cost' },
+      s_contrib_threshold:  { v: 0.3, dec: 2, vid: 'v_contrib_threshold' },
+      s_freerider:          { v: 0.5, dec: 2, vid: 'v_freerider' },
+      s_gov_strength:       { v: 0.0, dec: 2, vid: 'v_gov_strength' },
+    }
+  }
+};
+
+function applyPreset(name) {
+  const preset = PRESETS[name];
+  if (!preset) return;
+
+  // Update sliders and display values
+  Object.entries(preset.values).forEach(([id, { v, dec, vid }]) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.value = v;
+      if (vid) document.getElementById(vid).textContent = v.toFixed(dec);
+    }
+  });
+
+  // Set policy type radio to 'cost' for all presets
+  const costRadio = document.querySelector('input[name="policyType"][value="cost"]');
+  if (costRadio) costRadio.checked = true;
+
+  // Mark active preset button
+  _activePreset = name;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active-preset'));
+  document.getElementById('preset_' + name).classList.add('active-preset');
+
+  // Show toast
+  showToast(preset.label + ' — ' + preset.msg);
+
+  // Auto-run
+  if (['tool','agent','policy'].includes(currentMode)) {
+    runSimulationAndRender();
+  } else if (currentMode === 'compare') {
+    runCompareView();
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ═══════════════════════════════════════════
+// FEATURE 1: SPLIT-SCREEN COMPARE VIEW
+// ═══════════════════════════════════════════
+function renderCompareGini(divId, res, color, name) {
+  const rounds = res.giniHistory.length;
+  const xs = Array.from({ length: rounds }, (_, i) => i + 1);
+  Plotly.react(divId, [{
+    x: xs, y: res.giniHistory,
+    mode: 'lines', name,
+    line: { color, width: 2.5 },
+    fill: 'tozeroy',
+    fillcolor: color.replace(')', ',0.1)').replace('rgb', 'rgba'),
+  }], baseLayout({
+    margin: { l: 40, r: 10, t: 8, b: 30 },
+    yaxis: { title: '基尼系数', range: [0, 1], gridcolor: '#edf2f7', zeroline: false },
+    xaxis: { title: '轮次', gridcolor: '#edf2f7' },
+    showlegend: false,
+    height: 180,
+  }), { responsive: true, displayModeBar: false });
+}
+
+function renderCompareWealth(divId, res, colorscale) {
+  const logW = res.agents.map(a => Math.log10(Math.max(1, a.wealth)));
+  Plotly.react(divId, [{
+    x: logW, type: 'histogram', nbinsx: 25,
+    marker: { color: logW, colorscale, showscale: false },
+  }], baseLayout({
+    margin: { l: 40, r: 10, t: 8, b: 30 },
+    xaxis: { title: 'log₁₀(财富)', tickvals: [1,2,3,4,5], ticktext: ['10','100','1K','10K','100K'] },
+    yaxis: { title: '人数', zeroline: false },
+    showlegend: false, bargap: 0.04,
+  }), { responsive: true, displayModeBar: false });
+}
+
+function renderCompareTasks(divId, res) {
+  const rounds = res.taskRoutineHist.length;
+  const xs = Array.from({ length: rounds }, (_, i) => i + 1);
+  Plotly.react(divId, [
+    { x: xs, y: res.taskRoutineHist,  type: 'scatter', mode: 'lines', name: '常规',
+      stackgroup: 'one', fillcolor: 'rgba(255,107,107,0.7)', line: { color: '#ff6b6b', width: 0 } },
+    { x: xs, y: res.taskFrontierHist, type: 'scatter', mode: 'lines', name: '边界',
+      stackgroup: 'one', fillcolor: 'rgba(78,205,196,0.7)', line: { color: '#4ecdc4', width: 0 } },
+    { x: xs, y: res.taskDomainHist,   type: 'scatter', mode: 'lines', name: '领域',
+      stackgroup: 'one', fillcolor: 'rgba(149,225,211,0.7)', line: { color: '#95e1d3', width: 0 } },
+  ], baseLayout({
+    margin: { l: 40, r: 10, t: 8, b: 30 },
+    xaxis: { title: '轮次', gridcolor: '#edf2f7' },
+    yaxis: { title: '任务份额', range: [0, 1], gridcolor: '#edf2f7' },
+    showlegend: true,
+    legend: { orientation: 'h', y: -0.3, font: { size: 9 } },
+  }), { responsive: true, displayModeBar: false });
+}
+
+function renderCompareCommunity(divId, res, color, name) {
+  const rounds = res.communityParticipationHist.length;
+  const xs = Array.from({ length: rounds }, (_, i) => i + 1);
+  Plotly.react(divId, [{
+    x: xs, y: res.communityParticipationHist,
+    mode: 'lines', name,
+    line: { color, width: 2.5 },
+    fill: 'tozeroy',
+    fillcolor: color.replace(')', ',0.1)').replace('rgb', 'rgba'),
+  }], baseLayout({
+    margin: { l: 40, r: 10, t: 8, b: 30 },
+    yaxis: { title: '参与率', tickformat: '.0%', range: [0, 1], gridcolor: '#edf2f7', zeroline: false },
+    xaxis: { title: '轮次', gridcolor: '#edf2f7' },
+    showlegend: false,
+    shapes: [{ type: 'line', x0: 1, x1: rounds, y0: 0.15, y1: 0.15, line: { color: '#ef4444', width: 1.5, dash: 'dash' } }],
+  }), { responsive: true, displayModeBar: false });
+}
+
+function runCompareView() {
+  const params = getParams();
+  const policyParams = getPolicyParams();
+
+  const agentRes  = runSimulation(params, 'agent', null);
+  const policyRes = runSimulation(params, 'policy', policyParams);
+
+  // Store for reuse
+  _agentResult  = agentRes;
+  _policyResult = policyRes;
+
+  renderCompareGini('cmp_gini_left',   agentRes,  '#ef4444', '🤖 Agent基线');
+  renderCompareGini('cmp_gini_right',  policyRes, '#2563eb', '🎛️ 政策方案');
+
+  renderCompareWealth('cmp_wealth_left',  agentRes,
+    [[0,'#fca5a5'],[0.5,'#f87171'],[1,'#dc2626']]);
+  renderCompareWealth('cmp_wealth_right', policyRes,
+    [[0,'#93c5fd'],[0.5,'#60a5fa'],[1,'#2563eb']]);
+
+  renderCompareTasks('cmp_tasks_left',  agentRes);
+  renderCompareTasks('cmp_tasks_right', policyRes);
+
+  // Community participation compare charts (single-trace for compare view)
+  renderCompareCommunity('cmp_community_left',  agentRes,  '#ef4444', '🤖 无政策参与率');
+  renderCompareCommunity('cmp_community_right', policyRes, '#2563eb', '🎛️ 政策方案参与率');
+
+  // Delta row
+  const agentGiniFinal  = agentRes.giniHistory[agentRes.giniHistory.length - 1];
+  const policyGiniFinal = policyRes.giniHistory[policyRes.giniHistory.length - 1];
+  const deltaGini = policyGiniFinal - agentGiniFinal;
+
+  const agentPoor  = agentRes.agents.filter(a => a.wealth < 100).length / agentRes.agents.length;
+  const policyPoor = policyRes.agents.filter(a => a.wealth < 100).length / policyRes.agents.length;
+  const deltaPoor  = policyPoor - agentPoor;
+
+  const agentDomDelta  = agentRes.taskDomainHist[agentRes.taskDomainHist.length-1] - agentRes.taskDomainHist[0];
+  const policyDomDelta = policyRes.taskDomainHist[policyRes.taskDomainHist.length-1] - policyRes.taskDomainHist[0];
+  const deltaDomain = policyDomDelta - agentDomDelta;
+
+  const giniEl = document.getElementById('cmp_delta_gini');
+  giniEl.textContent = (deltaGini >= 0 ? '+' : '') + deltaGini.toFixed(3);
+  giniEl.className = 'dm-val ' + (deltaGini < 0 ? 'better' : 'worse');
+
+  const poorEl = document.getElementById('cmp_delta_poor');
+  poorEl.textContent = (deltaPoor >= 0 ? '+' : '') + (deltaPoor * 100).toFixed(1) + 'pp';
+  poorEl.className = 'dm-val ' + (deltaPoor < 0 ? 'better' : 'worse');
+
+  const domEl = document.getElementById('cmp_delta_domain');
+  domEl.textContent = (deltaDomain >= 0 ? '+' : '') + (deltaDomain * 100).toFixed(1) + 'pp';
+  domEl.className = 'dm-val ' + (deltaDomain > 0 ? 'better' : 'worse');
+
+  const agentPartFinal  = agentRes.communityParticipationHist[agentRes.communityParticipationHist.length - 1] || 0;
+  const policyPartFinal = policyRes.communityParticipationHist[policyRes.communityParticipationHist.length - 1] || 0;
+  const deltaPart = policyPartFinal - agentPartFinal;
+
+  const partEl = document.getElementById('cmp_delta_participation');
+  partEl.textContent = (deltaPart >= 0 ? '+' : '') + (deltaPart * 100).toFixed(1) + 'pp';
+  partEl.className = 'dm-val ' + (deltaPart > 0 ? 'better' : 'worse');
+}
+
+// ═══════════════════════════════════════════
+// FEATURE 2: SENSITIVITY HEATMAP
+// ═══════════════════════════════════════════
+const PARAM_RANGES = {
+  qFloor0:          { min: 0.1,   max: 0.9,  label: 'q_floor' },
+  gOss:             { min: 0.005, max: 0.08, label: 'g_oss' },
+  gProp:            { min: 0.005, max: 0.08, label: 'g_prop' },
+  digitalBias:      { min: 1,     max: 5,    label: '数字素养偏向' },
+  wealthDigitalCorr:{ min: 0,     max: 0.9,  label: '财富-素养相关性' },
+  routineShare:     { min: 0.2,   max: 0.8,  label: '常规任务占比' },
+  mobility:         { min: 0.01,  max: 0.15, label: '职业转型速度' },
+};
+
+function linspace(min, max, n) {
+  return Array.from({ length: n }, (_, i) => min + (max - min) * i / (n - 1));
+}
+
+function generateHeatmap() {
+  const xKey = document.getElementById('sens_x').value;
+  const yKey = document.getElementById('sens_y').value;
+
+  if (xKey === yKey) {
+    alert('请选择不同的X轴和Y轴参数');
+    return;
+  }
+
+  const btn = document.getElementById('genHeatmapBtn');
+  const prog = document.getElementById('sensProgress');
+  btn.disabled = true;
+  prog.textContent = '计算中...';
+
+  setTimeout(() => {
+    const N = 8;
+    const xRange = PARAM_RANGES[xKey];
+    const yRange = PARAM_RANGES[yKey];
+    const xVals = linspace(xRange.min, xRange.max, N);
+    const yVals = linspace(yRange.min, yRange.max, N);
+
+    const baseParams = getParams();
+    // Override for speed: 100 agents, 15 rounds
+    baseParams.N = 100;
+    baseParams.rounds = 15;
+
+    const zMatrix = [];
+    let computed = 0;
+    const total = N * N;
+
+    for (let yi = 0; yi < N; yi++) {
+      const row = [];
+      for (let xi = 0; xi < N; xi++) {
+        const p = Object.assign({}, baseParams);
+        p[xKey] = xVals[xi];
+        p[yKey] = yVals[yi];
+        p.seed = 42; // reproducibility
+        try {
+          const res = runSimulation(p, 'agent', null);
+          const finalGini = res.giniHistory[res.giniHistory.length - 1];
+          row.push(parseFloat(finalGini.toFixed(3)));
+        } catch(e) {
+          row.push(0.5);
+        }
+        computed++;
+      }
+      zMatrix.push(row);
+    }
+
+    prog.textContent = `完成 (${total} 格)`;
+
+    // Axis labels
+    const xLabels = xVals.map(v => v.toFixed(3));
+    const yLabels = yVals.map(v => v.toFixed(3));
+
+    // Annotations for each cell
+    const annotations = [];
+    for (let yi = 0; yi < N; yi++) {
+      for (let xi = 0; xi < N; xi++) {
+        annotations.push({
+          x: xLabels[xi], y: yLabels[yi],
+          text: zMatrix[yi][xi].toFixed(2),
+          showarrow: false,
+          font: { size: 9, color: zMatrix[yi][xi] > 0.55 ? '#fff' : '#222' },
+        });
+      }
+    }
+
+    Plotly.react('chart_heatmap', [{
+      type: 'heatmap',
+      x: xLabels,
+      y: yLabels,
+      z: zMatrix,
+      colorscale: [
+        [0,   '#1e40af'],
+        [0.25,'#3b82f6'],
+        [0.5, '#fbbf24'],
+        [0.75,'#ef4444'],
+        [1,   '#7f1d1d'],
+      ],
+      zmin: 0.2, zmax: 0.8,
+      colorbar: { title: '基尼系数', thickness: 14, len: 0.8 },
+      hovertemplate: `${xRange.label}=%{x}<br>${yRange.label}=%{y}<br>Gini=%{z:.3f}<extra></extra>`,
+    }], {
+      margin: { l: 80, r: 80, t: 20, b: 80 },
+      paper_bgcolor: 'transparent',
+      plot_bgcolor: 'transparent',
+      font: { family: '-apple-system, "PingFang SC", sans-serif', size: 10 },
+      xaxis: { title: xRange.label },
+      yaxis: { title: yRange.label },
+      annotations,
+    }, { responsive: true, displayModeBar: false });
+
+    // Interpretation text
+    const xVec = zMatrix[0].map((_, xi) =>
+      zMatrix.reduce((s, row) => s + row[xi], 0) / N
+    );
+    const yVec = yVals.map((_, yi) =>
+      zMatrix[yi].reduce((s, v) => s + v, 0) / N
+    );
+    const cv = arr => {
+      const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+      const std = Math.sqrt(arr.reduce((s, v) => s + (v - mean) ** 2, 0) / arr.length);
+      return (std / mean).toFixed(3);
+    };
+    const xcv = cv(xVec);
+    const ycv = cv(yVec);
+    const xMoreSensitive = parseFloat(xcv) >= parseFloat(ycv);
+
+    document.getElementById('sensitivityText').innerHTML =
+      `<strong>解读：</strong>基尼系数对 <strong>${xRange.label}</strong> 的变异系数为 ${xcv}，` +
+      `对 <strong>${yRange.label}</strong> 的变异系数为 ${ycv}。` +
+      `${xMoreSensitive
+        ? `<strong>${xRange.label}</strong> 是更敏感的政策杠杆`
+        : `<strong>${yRange.label}</strong> 是更敏感的政策杠杆`}` +
+      `（变异系数越大，参数对不平等的边际影响越强）。` +
+      `蓝色区域代表低不平等的参数组合，可作为政策目标区间。`;
+
+    btn.disabled = false;
+  }, 30);
+}
+
+// ═══════════════════════════════════════════
+// FEATURE 4: CAUSAL IDENTIFICATION
+// ═══════════════════════════════════════════
+
+// 4a: RCT
+function runRCT() {
+  const btn = document.getElementById('rctBtn');
+  btn.disabled = true;
+  btn.textContent = '运行中...';
+
+  setTimeout(() => {
+    const params = Object.assign({}, getParams(), { N: 100, rounds: 20, seed: 9999 });
+
+    const naturalRes = runSimulation(params, 'agent', null);
+    const randomRes  = runSimulation(params, 'agent', null, { randomTier: true });
+
+    const natGini = naturalRes.giniHistory[naturalRes.giniHistory.length - 1];
+    const rndGini = randomRes.giniHistory[randomRes.giniHistory.length - 1];
+    const deltaG  = (natGini - rndGini).toFixed(3);
+
+    const rounds = naturalRes.giniHistory.length;
+    const xs = Array.from({ length: rounds }, (_, i) => i + 1);
+
+    document.getElementById('chart_rct').style.display = '';
+    Plotly.react('chart_rct', [
+      { x: xs, y: naturalRes.giniHistory, mode: 'lines', name: '自然分配（财富→Tier）',
+        line: { color: '#ef4444', width: 2.5 }, fill: 'tozeroy', fillcolor: 'rgba(239,68,68,0.07)' },
+      { x: xs, y: randomRes.giniHistory, mode: 'lines', name: '随机分配（打断相关性）',
+        line: { color: '#3b82f6', width: 2.5, dash: 'dash' }, fill: 'tozeroy', fillcolor: 'rgba(59,130,246,0.07)' },
+    ], baseLayout({
+      yaxis: { title: '基尼系数', range: [0, 1], gridcolor: '#edf2f7' },
+      xaxis: { title: '模拟轮次', gridcolor: '#edf2f7' },
+    }), { responsive: true, displayModeBar: false });
+
+    const res = document.getElementById('rctResult');
+    res.className = 'causal-result visible';
+    res.innerHTML = `
+      <strong>结果：</strong>自然分配最终Gini = <strong>${natGini.toFixed(3)}</strong>，
+      随机分配最终Gini = <strong>${rndGini.toFixed(3)}</strong>。<br>
+      <strong>解读：</strong>随机分配消除了财富-Tier的选择偏差。
+      差异 ΔG = ${deltaG} 反映了选择偏差的因果贡献（约占总不平等差异的
+      ${Math.abs(((natGini - rndGini) / (natGini + 0.001)) * 100).toFixed(1)}%）。
+      ${rndGini > 0.35
+        ? '即便随机分配后Gini仍相对较高，说明Agent<strong>质量差异本身</strong>有独立因果效应，不能仅归因于初始财富不平等。'
+        : '随机分配后Gini显著下降，说明财富决定的<strong>Tier选择偏差</strong>是不平等的主要驱动因素。'}
+    `;
+    btn.disabled = false;
+    btn.textContent = '运行随机分配实验';
+  }, 30);
+}
+
+// 4b: Placebo Test
+function runPlacebo() {
+  const btn = document.getElementById('placeboBtn');
+  btn.disabled = true;
+  btn.textContent = '运行中（约3-5秒）...';
+
+  setTimeout(() => {
+    const params = Object.assign({}, getParams(), { N: 100, rounds: 20 });
+
+    // Natural assignment Gini
+    const naturalRes = runSimulation(Object.assign({}, params, { seed: 9999 }), 'agent', null);
+    const natGini = naturalRes.giniHistory[naturalRes.giniHistory.length - 1];
+
+    // 100 placebo runs
+    const placeboGinis = [];
+    for (let i = 0; i < 100; i++) {
+      const p = Object.assign({}, params, { seed: 1000 + i * 37 });
+      const res = runSimulation(p, 'agent', null, { randomTier: true });
+      placeboGinis.push(res.giniHistory[res.giniHistory.length - 1]);
+    }
+
+    // p-value: proportion of placebo > natural
+    const exceeding = placeboGinis.filter(g => g >= natGini).length;
+    const pVal = (exceeding / 100).toFixed(2);
+    const pctile = Math.round((1 - exceeding / 100) * 100);
+
+    document.getElementById('chart_placebo').style.display = '';
+    Plotly.react('chart_placebo', [
+      {
+        x: placeboGinis, type: 'histogram', nbinsx: 20, name: '安慰剂分布',
+        marker: { color: 'rgba(99,102,241,0.6)', line: { color: '#6366f1', width: 1 } },
+      },
+      {
+        x: [natGini, natGini], y: [0, 20], type: 'scatter', mode: 'lines',
+        name: `实际Gini = ${natGini.toFixed(3)}`,
+        line: { color: '#ef4444', width: 2.5, dash: 'dash' },
+      }
+    ], baseLayout({
+      yaxis: { title: '频次', gridcolor: '#edf2f7' },
+      xaxis: { title: '基尼系数（安慰剂）', gridcolor: '#edf2f7' },
+      showlegend: true,
+    }), { responsive: true, displayModeBar: false });
+
+    const res = document.getElementById('placeboResult');
+    res.className = 'causal-result visible';
+    res.innerHTML = `
+      <strong>结果：</strong>实际基尼系数 = <strong>${natGini.toFixed(3)}</strong>，
+      位于安慰剂分布的第 <strong>${pctile}</strong> 百分位，p值 = <strong>${pVal}</strong>。<br>
+      <strong>解读：</strong>
+      ${parseFloat(pVal) < 0.05
+        ? `p = ${pVal} &lt; 0.05，<strong>显著排除</strong>随机因素驱动假说。财富分层决定的Agent质量差异对基尼系数有统计上显著的因果效应。`
+        : `p = ${pVal} ≥ 0.05，不能完全排除随机因素的贡献，建议增大模拟规模或轮数后重试。`}
+    `;
+    btn.disabled = false;
+    btn.textContent = '运行安慰剂检验（100次）';
+  }, 30);
+}
+
+// 4c: Exogenous Shock
+function runShock() {
+  const btn = document.getElementById('shockBtn');
+  btn.disabled = true;
+  btn.textContent = '运行中...';
+
+  setTimeout(() => {
+    const SHOCK_ROUND = 15;
+    const TOTAL_ROUNDS = 30;
+    const params = Object.assign({}, getParams(), { N: 150, rounds: TOTAL_ROUNDS, seed: 7777 });
+
+    const shockRes = runSimulation(params, 'agent', null, {
+      shockRound: SHOCK_ROUND,
+      shockMul: 1.5,
+    });
+    const noShockRes = runSimulation(params, 'agent', null);
+
+    // Compute slopes
+    function slope(arr, from, to) {
+      const ys = arr.slice(from, to);
+      const n = ys.length;
+      if (n < 2) return 0;
+      const xs = Array.from({ length: n }, (_, i) => i);
+      const mx = xs.reduce((a,b)=>a+b,0)/n;
+      const my = ys.reduce((a,b)=>a+b,0)/n;
+      const num = xs.reduce((s,x,i)=>s+(x-mx)*(ys[i]-my),0);
+      const den = xs.reduce((s,x)=>s+(x-mx)**2,0);
+      return den === 0 ? 0 : num / den;
+    }
+    const slopeBefore = slope(shockRes.giniHistory, 0, SHOCK_ROUND).toFixed(4);
+    const slopeAfter  = slope(shockRes.giniHistory, SHOCK_ROUND, TOTAL_ROUNDS).toFixed(4);
+
+    // Count forced demotions (agents whose tier dropped after shock round)
+    // Approximate: agents with wealth < 200 (Tier≤1) at end vs before shock
+    const tiersBefore = shockRes.tierCounts[SHOCK_ROUND - 1];
+    const tiersAfter  = shockRes.tierCounts[Math.min(SHOCK_ROUND + 4, TOTAL_ROUNDS - 1)];
+    const demoted = Math.max(0,
+      (tiersAfter[0] + tiersAfter[1]) - (tiersBefore[0] + tiersBefore[1])
+    );
+
+    const rounds = shockRes.giniHistory.length;
+    const xs = Array.from({ length: rounds }, (_, i) => i + 1);
+
+    document.getElementById('chart_shock').style.display = '';
+    Plotly.react('chart_shock', [
+      { x: xs, y: shockRes.giniHistory, mode: 'lines', name: '算力涨价（+50%成本）',
+        line: { color: '#ef4444', width: 2.5 } },
+      { x: xs, y: noShockRes.giniHistory, mode: 'lines', name: '无冲击基线',
+        line: { color: '#94a3b8', width: 2, dash: 'dash' } },
+      { x: [SHOCK_ROUND, SHOCK_ROUND], y: [0, 1], type: 'scatter', mode: 'lines',
+        name: '冲击时刻', line: { color: '#f59e0b', width: 2, dash: 'dot' }, showlegend: true },
+    ], baseLayout({
+      yaxis: { title: '基尼系数', range: [0, 1], gridcolor: '#edf2f7' },
+      xaxis: { title: '模拟轮次', gridcolor: '#edf2f7' },
+      annotations: [{
+        x: SHOCK_ROUND, y: 0.95,
+        text: '⚡ 算力涨价', showarrow: false,
+        font: { size: 11, color: '#f59e0b' },
+        bgcolor: 'rgba(255,255,255,0.85)', bordercolor: '#f59e0b',
+        borderwidth: 1, borderpad: 3,
+      }],
+    }), { responsive: true, displayModeBar: false });
+
+    const res = document.getElementById('shockResult');
+    res.className = 'causal-result visible';
+    res.innerHTML = `
+      <strong>结果：</strong>
+      冲击前Gini趋势：slope = <strong>${slopeBefore}</strong> / 轮次 &nbsp;|&nbsp;
+      冲击后Gini趋势：slope = <strong>${slopeAfter}</strong> / 轮次 &nbsp;|&nbsp;
+      被迫降级人数：<strong>${demoted}</strong> 人（从较高Tier降至Tier 0/1）<br>
+      <strong>外生冲击解读：</strong>算力涨价作为外生冲击（内生于市场价格，外生于个体能力），
+      导致 ${demoted} 人被迫降级。这些人的<em>能力未变</em>，仅Agent质量下降——
+      后续表现恶化可归因于Agent质量的因果效应（断点回归识别策略）。
+      ${parseFloat(slopeAfter) > parseFloat(slopeBefore)
+        ? '冲击后不平等加速扩大，说明算力成本具有强力的分层固化效应。'
+        : '冲击后不平等增速未明显加快，市场存在一定的自我缓冲机制。'}
+    `;
+    btn.disabled = false;
+    btn.textContent = '注入算力涨价冲击';
+  }, 30);
+}
+
+// 4d: Mechanism Decomposition
+function runMechanism() {
+  const btn = document.getElementById('mechBtn');
+  btn.disabled = true;
+  btn.textContent = '运行中...';
+
+  setTimeout(() => {
+    const params = Object.assign({}, getParams(), { N: 150, rounds: 30, seed: 5555 });
+
+    const fullRes      = runSimulation(params, 'agent', null);
+    const noCompRes    = runSimulation(params, 'agent', null, { noCompetition: true });
+    const noDiffRes    = runSimulation(params, 'agent', null, { noDiffusion: true });
+    const noRestrRes   = runSimulation(params, 'agent', null, { noRestructuring: true });
+
+    const fullGini     = fullRes.giniHistory[fullRes.giniHistory.length - 1];
+    const noCompGini   = noCompRes.giniHistory[noCompRes.giniHistory.length - 1];
+    const noDiffGini   = noDiffRes.giniHistory[noDiffRes.giniHistory.length - 1];
+    const noRestrGini  = noRestrRes.giniHistory[noRestrRes.giniHistory.length - 1];
+
+    const diffComp  = (fullGini - noCompGini).toFixed(3);
+    const diffDiff  = (fullGini - noDiffGini).toFixed(3);
+    const diffRestr = (fullGini - noRestrGini).toFixed(3);
+
+    const totalDiff = Math.abs(fullGini - noCompGini) + Math.abs(fullGini - noDiffGini) + Math.abs(fullGini - noRestrGini);
+    const pctComp   = totalDiff > 0 ? (Math.abs(fullGini - noCompGini)  / totalDiff * 100).toFixed(1) : '—';
+    const pctDiff   = totalDiff > 0 ? (Math.abs(fullGini - noDiffGini)  / totalDiff * 100).toFixed(1) : '—';
+    const pctRestr  = totalDiff > 0 ? (Math.abs(fullGini - noRestrGini) / totalDiff * 100).toFixed(1) : '—';
+
+    const rounds = fullRes.giniHistory.length;
+    const xs = Array.from({ length: rounds }, (_, i) => i + 1);
+
+    document.getElementById('chart_mechanism').style.display = '';
+    Plotly.react('chart_mechanism', [
+      { x: xs, y: fullRes.giniHistory,    mode: 'lines', name: '完整模型',
+        line: { color: '#7c3aed', width: 2.5 } },
+      { x: xs, y: noCompRes.giniHistory,  mode: 'lines', name: '关闭竞争（均等分配常规）',
+        line: { color: '#3b82f6', width: 2, dash: 'dash' } },
+      { x: xs, y: noDiffRes.giniHistory,  mode: 'lines', name: '关闭学习扩散',
+        line: { color: '#f97316', width: 2, dash: 'dot' } },
+      { x: xs, y: noRestrRes.giniHistory, mode: 'lines', name: '关闭职业重组',
+        line: { color: '#22c55e', width: 2, dash: 'longdash' } },
+    ], baseLayout({
+      yaxis: { title: '基尼系数', range: [0, 1], gridcolor: '#edf2f7' },
+      xaxis: { title: '模拟轮次', gridcolor: '#edf2f7' },
+    }), { responsive: true, displayModeBar: false });
+
+    const res = document.getElementById('mechResult');
+    res.className = 'causal-result visible';
+    res.innerHTML = `
+      <strong>机制贡献分解：</strong>（完整模型最终Gini = ${fullGini.toFixed(3)}）
+      <table class="mechanism-table">
+        <thead>
+          <tr>
+            <th>机制</th>
+            <th>关闭后Gini</th>
+            <th>差异 ΔGini</th>
+            <th>贡献占比</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>竞争机制（常规任务WTA）</td>
+            <td>${noCompGini.toFixed(3)}</td>
+            <td>${diffComp}</td>
+            <td>${pctComp}%</td>
+          </tr>
+          <tr>
+            <td>学习扩散（小世界网络）</td>
+            <td>${noDiffGini.toFixed(3)}</td>
+            <td>${diffDiff}</td>
+            <td>${pctDiff}%</td>
+          </tr>
+          <tr>
+            <td>职业重组（任务份额动态）</td>
+            <td>${noRestrGini.toFixed(3)}</td>
+            <td>${diffRestr}</td>
+            <td>${pctRestr}%</td>
+          </tr>
+        </tbody>
+      </table>
+      <br>负号差异意味着关闭该机制后不平等<em>下降</em>（该机制有加剧效果）；
+      正号意味着该机制有<em>平等化</em>作用。占比最高的机制为不平等的<strong>主导因果路径</strong>。
+    `;
+    btn.disabled = false;
+    btn.textContent = '运行机制关闭实验';
+  }, 30);
+}
+
+// ──────── INIT ON LOAD ────────
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('modeDesc').innerHTML = modeDescriptions['tool'];
+  runSimulationAndRender();
+});
+
+// Handle window resize
+window.addEventListener('resize', () => {
+  ['chart_gini','chart_wealth','chart_tasks','chart_quality','chart_tier','chart_community',
+   'cmp_gini_left','cmp_gini_right','cmp_wealth_left','cmp_wealth_right',
+   'cmp_tasks_left','cmp_tasks_right','cmp_community_left','cmp_community_right',
+   'chart_heatmap',
+   'chart_rct','chart_placebo','chart_shock','chart_mechanism',
+  ].forEach(id => {
+    try { Plotly.Plots.resize(id); } catch(e) {}
+  });
+});
+</script>
+
+</body>
+</html>
